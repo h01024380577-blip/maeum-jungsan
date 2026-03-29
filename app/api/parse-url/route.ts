@@ -49,18 +49,25 @@ function calculateConfidence(data: any): 'high' | 'medium' | 'low' {
   return filled >= 3 ? 'high' : filled >= 2 ? 'medium' : 'low';
 }
 
-/** og:image URL에서 이미지를 다운로드하여 base64로 변환 */
-async function fetchImageAsBase64(imageUrl: string): Promise<{ data: string; mimeType: string } | null> {
+/**
+ * Jina Reader API로 JS 렌더링된 페이지 텍스트 가져오기
+ * SPA 사이트에서도 실제 콘텐츠를 추출할 수 있음
+ */
+async function fetchRenderedText(url: string): Promise<string | null> {
   try {
-    const res = await fetch(imageUrl, {
-      signal: AbortSignal.timeout(8000),
-      headers: { 'User-Agent': 'Mozilla/5.0' },
+    const res = await fetch(`https://r.jina.ai/${url}`, {
+      headers: { 'Accept': 'text/plain' },
+      signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) return null;
-    const contentType = res.headers.get('content-type') || 'image/png';
-    const buffer = await res.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString('base64');
-    return { data: base64, mimeType: contentType.split(';')[0] };
+    const text = await res.text();
+    // Markdown 이미지 태그 제거, 3000자 제한
+    return text
+      .replace(/!\[.*?\]\(.*?\)/g, '')
+      .replace(/\[Image.*?\]/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+      .slice(0, 3000);
   } catch {
     return null;
   }
@@ -93,31 +100,29 @@ export async function POST(request: Request) {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    let source: string = 'url-context';
 
     // ========== Phase 1: 서버사이드 HTML 파싱 ==========
-    let html = '';
-    let fetchSuccess = false;
     let meta = { title: '', description: '', image: '', siteName: '' };
     let jsonLd: object | null = null;
     let bodyText = '';
+    let fetchSuccess = false;
 
     try {
-      html = await fetchPageHtml(url);
+      const html = await fetchPageHtml(url);
       fetchSuccess = true;
       meta = extractMetaTags(html);
       jsonLd = extractJsonLd(html);
       bodyText = extractBodyText(html);
     } catch {}
 
-    // Phase 1a: 충분한 텍스트 데이터가 있으면 텍스트 기반 분석
+    // Phase 1a: og + body 텍스트가 충분하면 바로 분석
     if (fetchSuccess && hasEnoughData(meta, bodyText) && bodyText.length > 50) {
       try {
         const parts: string[] = [];
         if (meta.title) parts.push(`제목: ${meta.title}`);
         if (meta.description) parts.push(`설명: ${meta.description}`);
         if (jsonLd) parts.push(`JSON-LD: ${JSON.stringify(jsonLd)}`);
-        if (bodyText) parts.push(`본문: ${bodyText}`);
+        parts.push(`본문: ${bodyText}`);
         parts.push(`\n위 데이터에서 다음 JSON을 추출해:\n${OUTPUT_SCHEMA}`);
 
         const response = await ai.models.generateContent({
@@ -127,64 +132,50 @@ export async function POST(request: Request) {
         });
         const data = normalizeData(parseAiResponse(response.text || '{}'));
         const confidence = calculateConfidence(data);
-        source = bodyText.length > 50 ? 'og+body' : 'og-only';
 
         if (confidence !== 'low') {
-          return NextResponse.json({ success: true, data, confidence, source });
+          return NextResponse.json({ success: true, data, confidence, source: 'og+body' });
         }
       } catch (e: any) {
         console.error('[parse-url] Phase 1a error:', e?.message);
       }
     }
 
-    // ========== Phase 1b: og:image 멀티모달 분석 ==========
-    // og:title에서 기본 정보 + og:image에서 상세 정보 (장소, 계좌 등) 추출
-    if (meta.image) {
-      try {
-        const img = await fetchImageAsBase64(meta.image);
-        if (img) {
-          const contextHint = meta.title
-            ? `참고: 이 초대장의 제목은 "${meta.title}" 입니다.`
-            : '';
+    // ========== Phase 2: Jina Reader (SPA 렌더링 대응) ==========
+    // JS로 동적 렌더링되는 사이트의 실제 콘텐츠를 가져옴
+    try {
+      const renderedText = await fetchRenderedText(url);
+      if (renderedText && renderedText.length > 100) {
+        const prompt = `아래는 경조사 초대장 웹페이지의 텍스트 내용이야.
+이 데이터에서 경조사 정보를 추출해줘.
 
-          const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: {
-              parts: [
-                { inlineData: { data: img.data, mimeType: img.mimeType } },
-                { text: `이 이미지는 한국 경조사 초대장이야. ${contextHint}
-이미지에서 보이는 정보를 추출해줘. 이미지에 없는 정보는 빈 문자열로 반환해.
+${renderedText}
 
-다음 JSON 형식으로 반환해:
-${OUTPUT_SCHEMA}` },
-              ],
-            },
-            config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: 'application/json' },
-          });
+위 데이터에서 다음 JSON을 추출해:
+${OUTPUT_SCHEMA}`;
 
-          const data = normalizeData(parseAiResponse(response.text || '{}'));
-          const confidence = calculateConfidence(data);
-          source = 'og-image';
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt,
+          config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: 'application/json' },
+        });
+        const data = normalizeData(parseAiResponse(response.text || '{}'));
+        const confidence = calculateConfidence(data);
 
-          if (confidence !== 'low') {
-            return NextResponse.json({ success: true, data, confidence, source });
-          }
+        if (confidence !== 'low') {
+          return NextResponse.json({ success: true, data, confidence, source: 'rendered' });
         }
-      } catch (e: any) {
-        console.error('[parse-url] Phase 1b (og:image) error:', e?.message);
       }
+    } catch (e: any) {
+      console.error('[parse-url] Phase 2 (Jina) error:', e?.message);
     }
 
-    // ========== Phase 2: Gemini urlContext (최후 수단) ==========
+    // ========== Phase 3: Gemini urlContext (최후 수단) ==========
     try {
-      const prompt = `다음 URL은 한국 경조사(결혼식/부고/생일) 초대장 링크야.
+      const prompt = `다음 URL은 한국 경조사 초대장 링크야.
 이 URL의 실제 페이지 내용을 읽고 경조사 정보를 추출해줘.
-
 URL: ${url}
-
-반드시 페이지에서 읽은 실제 데이터만 사용해.
-페이지를 읽을 수 없거나 정보가 없으면 모든 필드를 빈 문자열("")로 반환해.
-절대 추측하거나 만들어내지 마.
+반드시 페이지에서 읽은 실제 데이터만 사용해. 추측하지 마.
 
 다음 JSON 형식으로 반환해:
 ${OUTPUT_SCHEMA}`;
@@ -194,13 +185,12 @@ ${OUTPUT_SCHEMA}`;
         contents: prompt,
         config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ urlContext: {} }] },
       });
-
       const data = normalizeData(parseAiResponse(response.text || '{}'));
       const confidence = calculateConfidence(data);
 
       return NextResponse.json({ success: true, data, confidence, source: 'url-context' });
     } catch (e: any) {
-      console.error('[parse-url] Phase 2 error:', e?.message);
+      console.error('[parse-url] Phase 3 error:', e?.message);
       return NextResponse.json(
         { success: false, reason: 'ai_failed', message: 'AI 분석에 실패했습니다.' },
         { status: 500 },
