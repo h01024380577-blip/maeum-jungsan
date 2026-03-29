@@ -11,7 +11,7 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.KAKAO_CLIENT_SECRET || 'UNUSED',
     }),
   ],
-  debug: process.env.NODE_ENV === 'development',
+  debug: true,
   callbacks: {
     session({ session, user }) {
       if (session.user) {

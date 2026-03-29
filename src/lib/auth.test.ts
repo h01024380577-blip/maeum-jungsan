@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 
-// Prisma를 mock해서 DB 연결 없이 테스트
 vi.mock('./prisma', () => ({
   prisma: {},
 }));
