@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Pretendard", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-gray-100 text-gray-900 antialiased;
+    font-family: var(--font-sans);
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Custom styles for react-calendar */
+.react-calendar {
+  border: none !important;
+  font-family: inherit !important;
+}
+
+.react-calendar__tile {
+  border-radius: 12px !important;
+}
+
+.react-calendar__tile--active {
+  background: #2563eb !important;
+  color: white !important;
+}

@@ -1,0 +1,5 @@
+{
+  "name": "마음정산",
+  "description": "AI 기반 청첩장 분석 및 물가 상승률 반영 경조사비 추천 서비스",
+  "requestFramePermissions": []
+}

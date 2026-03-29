@@ -1,0 +1,73 @@
+"use client";
+
+import React from 'react';
+import { Home, Calendar as CalendarIcon, History, BarChart3, Users } from 'lucide-react';
+import { Toaster } from 'sonner';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+
+type Tab = 'home' | 'calendar' | 'history' | 'stats' | 'contacts';
+
+const tabs: { key: Tab; icon: typeof Home; label: string; path: string }[] = [
+  { key: 'home', icon: Home, label: '홈', path: '/' },
+  { key: 'calendar', icon: CalendarIcon, label: '달력', path: '/calendar' },
+  { key: 'history', icon: History, label: '내역', path: '/history' },
+  { key: 'contacts', icon: Users, label: '인맥', path: '/contacts' },
+  { key: 'stats', icon: BarChart3, label: '통계', path: '/stats' },
+];
+
+export default function Layout({ children, activeTab }: { children: React.ReactNode; activeTab: Tab }) {
+  const router = useRouter();
+
+  return (
+    <div className="min-h-screen bg-zinc-900 flex items-center justify-center md:py-6">
+      <Toaster position="top-center" richColors toastOptions={{ style: { borderRadius: '14px', fontSize: '13px', fontWeight: 600 } }} />
+
+      <div className="w-full max-w-[430px] h-screen md:h-[880px] bg-gray-50 md:rounded-[44px] md:border-[7px] md:border-zinc-800 md:shadow-2xl relative overflow-hidden flex flex-col">
+        <main className="flex-1 overflow-y-auto no-scrollbar">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+          >
+            {children}
+          </motion.div>
+        </main>
+
+        {/* Bottom Navigation */}
+        <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 safe-bottom z-50">
+          <div className="flex justify-around items-center pt-2.5 pb-2 px-3">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.key;
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => router.push(tab.path)}
+                  className="relative flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all active:scale-90"
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="nav-pill"
+                      className="absolute -top-2.5 w-5 h-[3px] bg-blue-500 rounded-full"
+                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    />
+                  )}
+                  <Icon
+                    size={21}
+                    strokeWidth={isActive ? 2.4 : 1.6}
+                    className={isActive ? 'text-blue-500' : 'text-gray-400'}
+                  />
+                  <span className={`text-[10px] mt-1 font-semibold ${isActive ? 'text-blue-500' : 'text-gray-400'}`}>
+                    {tab.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
+    </div>
+  );
+}
