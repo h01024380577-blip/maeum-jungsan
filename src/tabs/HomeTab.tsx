@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp } from 'lucide-react';
+import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, LogIn, LogOut, User } from 'lucide-react';
 import { useStore, EventEntry, EventType } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 import { GoogleGenAI } from "@google/genai";
 import { toast } from 'sonner';
+import { useSession, signIn, signOut } from 'next-auth/react';
 
 const eventIcon = (t: string, size = 14) => {
   if (t === 'wedding') return <Heart size={size} className="text-pink-500 fill-pink-500" />;
@@ -17,6 +18,7 @@ const eventLabel = (t: string) => t === 'wedding' ? '결혼' : t === 'funeral' ?
 
 export default function HomeTab() {
   const { entries, addEntry, addFeedback, contacts } = useStore();
+  const { data: session } = useSession();
   const [inputText, setInputText] = useState('');
   const [inputUrl, setInputUrl] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -184,6 +186,28 @@ export default function HomeTab() {
             <Sparkles size={18} className="text-blue-500" />
           </div>
         </div>
+
+        {/* 로그인 상태 */}
+        {session ? (
+          <div className="flex items-center justify-between mb-4 px-1">
+            <div className="flex items-center space-x-2">
+              {session.user?.image ? (
+                <img src={session.user.image} alt="" className="w-7 h-7 rounded-full" />
+              ) : (
+                <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center"><User size={14} className="text-blue-500" /></div>
+              )}
+              <span className="text-xs font-bold text-gray-600">{session.user?.name}</span>
+            </div>
+            <button onClick={() => signOut()} className="text-[11px] text-gray-400 font-medium flex items-center space-x-1 hover:text-gray-600">
+              <LogOut size={12} /><span>로그아웃</span>
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => signIn('kakao')} className="w-full mb-4 py-3 bg-[#FEE500] text-[#191919] rounded-xl font-bold text-sm flex items-center justify-center space-x-2 active:scale-[0.98] transition-all">
+            <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#191919" d="M9 1C4.58 1 1 3.79 1 7.21c0 2.17 1.45 4.08 3.64 5.18l-.93 3.44c-.08.3.26.54.52.37l4.12-2.74c.21.02.43.03.65.03 4.42 0 8-2.79 8-6.28C17 3.79 13.42 1 9 1"/></svg>
+            <span>카카오로 시작하기</span>
+          </button>
+        )}
 
         {/* Hero Title */}
         <div className="text-center mb-8">
