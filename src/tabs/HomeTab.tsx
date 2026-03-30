@@ -116,7 +116,11 @@ export default function HomeTab() {
         const b64 = data.split(',')[1];
         const gen = (m: string) => ai.models.generateContent({ model: m, contents: { parts: [{ inlineData: { data: b64, mimeType: "image/jpeg" } }, { text: "Extract event info." }] }, config: { systemInstruction: sysInst, responseMimeType: "application/json" } }).then(r => r.text || "{}");
         try { responseText = await Promise.race([gen("gemini-2.5-flash"), new Promise<string>((_, rej) => setTimeout(() => rej("timeout"), 8000))]); }
-        catch { responseText = await gen("gemini-2.5-pro-preview-06-05"); }
+        catch (imgErr: any) {
+          // rate limit은 재시도 없이 바깥 catch로 전파
+          if (imgErr?.message?.includes('429') || imgErr?.message?.includes('quota') || imgErr?.message?.includes('RESOURCE_EXHAUSTED')) throw imgErr;
+          responseText = await gen("gemini-2.5-pro-preview-06-05");
+        }
       } else {
         responseText = (await ai.models.generateContent({ model: "gemini-2.5-flash", contents: data, config: { systemInstruction: sysInst, responseMimeType: "application/json" } })).text || "{}";
       }
