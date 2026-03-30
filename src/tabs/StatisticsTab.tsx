@@ -98,8 +98,8 @@ export default function StatisticsTab() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={byRelation} layout="vertical">
                     <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={55} tick={{ fontSize: 11, fontWeight: 600, fill: '#9ca3af' }} />
-                    <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(v) => `${Number(v).toLocaleString()}원`} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '12px' }} />
+                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={80} tick={{ fontSize: 11, fontWeight: 600, fill: '#9ca3af' }} />
+                    <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(v: any) => [`${Number(v).toLocaleString()}원`, '합계']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '12px' }} />
                     <Bar dataKey="value" fill={tab === 'INCOME' ? '#3b82f6' : '#ef4444'} radius={[0, 10, 10, 0]} barSize={20} />
                   </BarChart>
                 </ResponsiveContainer>
