@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/src/lib/auth';
 import { prisma } from '@/src/lib/prisma';
 import { resolveUiTheme, validateCreateEventInput } from '@/src/lib/events';
+import { getAuthenticatedUserId } from '@/src/lib/apiAuth';
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
       return NextResponse.json(
         { success: false, message: '로그인이 필요합니다.' },
         { status: 401 },
@@ -28,7 +27,7 @@ export async function POST(request: Request) {
     const result = await prisma.$transaction(async (tx: any) => {
       const event = await tx.event.create({
         data: {
-          userId: session.user.id,
+          userId,
           eventType: body.eventType,
           targetName: body.targetName.trim(),
           date: new Date(body.date),
@@ -47,7 +46,7 @@ export async function POST(request: Request) {
         transaction = await tx.transaction.create({
           data: {
             eventId: event.id,
-            userId: session.user.id,
+            userId,
             type: body.transaction.type || 'EXPENSE',
             amount: Math.round(Number(body.transaction.amount)),
             account: body.transaction.account || '',
@@ -83,8 +82,8 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
       return NextResponse.json(
         { success: false, message: '로그인이 필요합니다.' },
         { status: 401 },
@@ -92,7 +91,7 @@ export async function GET() {
     }
 
     const events = await prisma.event.findMany({
-      where: { userId: session.user.id },
+      where: { userId },
       include: {
         transactions: {
           select: { id: true, type: true, amount: true, isPaid: true, account: true },
