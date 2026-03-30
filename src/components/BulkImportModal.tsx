@@ -23,6 +23,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
     relation: -1,
   });
   const [error, setError] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,9 +86,14 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
       return;
     }
     
-    await bulkAddEntries(processed as any);
-    onClose();
-    reset();
+    setIsImporting(true);
+    try {
+      await bulkAddEntries(processed as any);
+      onClose();
+      reset();
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const reset = () => {
@@ -115,7 +121,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={isImporting ? undefined : onClose}
             className="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm"
           />
           <motion.div
@@ -126,7 +132,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
           >
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold">대량 불러오기</h2>
-              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
+              <button onClick={onClose} disabled={isImporting} className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-30">
                 <X size={20} />
               </button>
             </div>
@@ -285,15 +291,24 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                 <div className="flex space-x-3">
                   <button
                     onClick={() => setStep('mapping')}
-                    className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold active:scale-95 transition-all"
+                    disabled={isImporting}
+                    className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold active:scale-95 transition-all disabled:opacity-40"
                   >
                     이전으로
                   </button>
                   <button
                     onClick={handleImport}
-                    className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all"
+                    disabled={isImporting}
+                    className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
-                    일괄 등록하기
+                    {isImporting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>등록 중...</span>
+                      </>
+                    ) : (
+                      <span>일괄 등록하기</span>
+                    )}
                   </button>
                 </div>
               </div>
