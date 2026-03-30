@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { getSession } from 'next-auth/react';
 
 export type EventType = 'wedding' | 'funeral' | 'birthday' | 'other';
 export type TransactionType = 'INCOME' | 'EXPENSE';
@@ -58,13 +59,26 @@ interface AppState {
   resetAnalysis: () => void;
 }
 
-const DEVICE_ID = typeof window !== 'undefined'
-  ? (localStorage.getItem('heartbook-device-id') || (() => {
-      const id = crypto.randomUUID();
-      localStorage.setItem('heartbook-device-id', id);
-      return id;
-    })())
-  : 'server';
+/**
+ * 사용자 식별자 반환.
+ * 카카오 로그인 시 → NextAuth session.user.id (기기 무관 동일 ID)
+ * 미로그인 시 → localStorage DEVICE_ID (기기별 고유 ID, 하위 호환)
+ */
+async function getUserId(): Promise<string> {
+  try {
+    const session = await getSession();
+    if (session?.user?.id) return session.user.id;
+  } catch {}
+
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('heartbook-device-id');
+    if (stored) return stored;
+    const id = crypto.randomUUID();
+    localStorage.setItem('heartbook-device-id', id);
+    return id;
+  }
+  return 'server';
+}
 
 // Supabase row → app type 변환
 const toEntry = (row: any): EventEntry => ({
@@ -111,9 +125,10 @@ export const useStore = create<AppState>()((set, get) => ({
 
   loadFromSupabase: async () => {
     try {
+      const userId = await getUserId();
       const [entriesRes, contactsRes] = await Promise.all([
-        supabase.from('entries').select('*').eq('user_id', DEVICE_ID).order('created_at', { ascending: false }),
-        supabase.from('contacts').select('*').eq('user_id', DEVICE_ID),
+        supabase.from('entries').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+        supabase.from('contacts').select('*').eq('user_id', userId),
       ]);
 
       set({
@@ -128,6 +143,7 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   addEntry: async (entry) => {
+    const userId = await getUserId();
     let contactId = entry.contactId;
     if (!contactId) {
       const existing = get().contacts.find((c) => c.name === entry.targetName);
@@ -155,7 +171,7 @@ export const useStore = create<AppState>()((set, get) => ({
       recommendation_reason: entry.recommendationReason || '',
       custom_event_name: entry.customEventName || '',
       memo: entry.memo || '',
-      user_id: DEVICE_ID,
+      user_id: userId,
     }).select().single();
 
     if (error) { console.error('Insert entry error:', error); return; }
@@ -166,13 +182,14 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   addContact: async (contact) => {
+    const userId = await getUserId();
     const { data, error } = await supabase.from('contacts').insert({
       name: contact.name,
       phone: contact.phone || '',
       kakao_id: contact.kakaoId || '',
       relation: contact.relation || '',
       avatar: contact.avatar || '',
-      user_id: DEVICE_ID,
+      user_id: userId,
     }).select().single();
 
     if (error) { console.error('Insert contact error:', error); return ''; }
