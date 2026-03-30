@@ -46,17 +46,17 @@ export default function StatisticsTab() {
         <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5">
           <div className="bg-blue-50 rounded-2xl p-3.5 text-center">
             <TrendingUp size={14} className="text-blue-500 mx-auto mb-1" />
-            <p className="text-[10px] font-bold text-blue-400">총 수입</p>
+            <p className="text-[10px] font-bold text-blue-400">받음</p>
             <p className="text-base font-black text-blue-600">{(totalIncome / 10000).toFixed(0)}<span className="text-[10px] text-blue-400">만</span></p>
           </div>
           <div className="bg-red-50 rounded-2xl p-3.5 text-center">
             <TrendingDown size={14} className="text-red-400 mx-auto mb-1" />
-            <p className="text-[10px] font-bold text-red-400">총 지출</p>
+            <p className="text-[10px] font-bold text-red-400">보냄</p>
             <p className="text-base font-black text-red-500">{(totalExpense / 10000).toFixed(0)}<span className="text-[10px] text-red-400">만</span></p>
           </div>
           <div className="bg-white rounded-2xl p-3.5 text-center border border-gray-100">
             <Wallet size={14} className="text-gray-400 mx-auto mb-1" />
-            <p className="text-[10px] font-bold text-gray-400">순수지</p>
+            <p className="text-[10px] font-bold text-gray-400">합계</p>
             <p className={`text-base font-black ${balance >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{balance >= 0 ? '+' : ''}{(balance / 10000).toFixed(0)}<span className="text-[10px] text-gray-400">만</span></p>
           </div>
         </div>

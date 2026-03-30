@@ -242,7 +242,7 @@ export default function HomeTab() {
             <div className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
               <div className="flex items-center justify-center space-x-1 mb-1">
                 <Wallet size={11} className="text-gray-400" />
-                <span className="text-[9px] font-bold text-gray-400 uppercase">잔액</span>
+                <span className="text-[9px] font-bold text-gray-400 uppercase">합계</span>
               </div>
               <p className={`text-base font-black ${balance >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{balance >= 0 ? '+' : ''}{(balance / 10000).toFixed(0)}<span className="text-[10px] font-bold text-gray-400">만</span></p>
             </div>
