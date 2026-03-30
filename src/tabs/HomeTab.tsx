@@ -102,11 +102,13 @@ export default function HomeTab() {
           responseText = JSON.stringify(result.data);
         } else if (result.reason === 'rate_limit') {
           toast.error('무료 분석 한도를 모두 이용하셨습니다. 잠시 후 다시 시도해 주세요.');
+          setSelectedImage(null); setInputUrl(''); setInputText('');
           setIsParsing(false);
           return;
         } else {
           // 서버 분석 실패 시 수동 입력 안내 (hallucination 방지를 위해 클라이언트 직접 호출 제거)
           toast.error('링크 분석에 실패했습니다. 직접 입력을 이용해 주세요.');
+          setSelectedImage(null); setInputUrl(''); setInputText('');
           setIsParsing(false);
           return;
         }
@@ -144,6 +146,7 @@ export default function HomeTab() {
       else if (err?.message?.includes('429') || err?.message?.includes('quota') || err?.message?.includes('RESOURCE_EXHAUSTED'))
         toast.error('무료 분석 한도를 모두 이용하셨습니다. 잠시 후 다시 시도해 주세요.');
       else toast.error('분석 실패. 직접 입력을 이용해 주세요.');
+      setSelectedImage(null); setInputUrl(''); setInputText('');
     } finally { setIsParsing(false); }
   };
 
