@@ -174,7 +174,7 @@ export const useStore = create<AppState>()((set, get) => ({
       user_id: userId,
     }).select().single();
 
-    if (error) { console.error('Insert entry error:', error); return; }
+    if (error) { console.error('Insert entry error:', error); throw new Error(error.message); }
 
     set((state) => ({
       entries: [toEntry(data), ...state.entries],
@@ -192,7 +192,7 @@ export const useStore = create<AppState>()((set, get) => ({
       user_id: userId,
     }).select().single();
 
-    if (error) { console.error('Insert contact error:', error); return ''; }
+    if (error) { console.error('Insert contact error:', error); throw new Error(error.message); }
 
     const newContact = toContact(data);
     set((state) => ({ contacts: [...state.contacts, newContact] }));

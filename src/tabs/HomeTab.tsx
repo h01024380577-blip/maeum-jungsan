@@ -165,14 +165,19 @@ export default function HomeTab() {
 
   const handleSave = async (fd: any) => {
     if (initialParsedData && JSON.stringify(initialParsedData) !== JSON.stringify(fd)) addFeedback(initialParsedData, fd);
-    await addEntry({
-      contactId: fd.contactId, eventType: ['wedding', 'funeral', 'birthday', 'other'].includes(fd.eventType) ? fd.eventType : 'other',
-      type: fd.isIncome ? 'INCOME' : 'EXPENSE', date: fd.date, location: fd.location || '', targetName: fd.targetName || '',
-      amount: Number(fd.amount) || 0, relation: fd.relation || '', isIncome: !!fd.isIncome, memo: fd.memo || '',
-      account: fd.account || '', recommendationReason: fd.recommendationReason || '', customEventName: fd.customEventName || '',
-    });
-    toast.success('저장 완료!');
-    setShowBottomSheet(false); setInputText(''); setInputUrl(''); setSelectedImage(null); setParsedData(null); setInitialParsedData(null);
+    try {
+      await addEntry({
+        contactId: fd.contactId, eventType: ['wedding', 'funeral', 'birthday', 'other'].includes(fd.eventType) ? fd.eventType : 'other',
+        type: fd.isIncome ? 'INCOME' : 'EXPENSE', date: fd.date, location: fd.location || '', targetName: fd.targetName || '',
+        amount: Number(fd.amount) || 0, relation: fd.relation || '', isIncome: !!fd.isIncome, memo: fd.memo || '',
+        account: fd.account || '', recommendationReason: fd.recommendationReason || '', customEventName: fd.customEventName || '',
+      });
+      toast.success('저장 완료!');
+      setShowBottomSheet(false); setInputText(''); setInputUrl(''); setSelectedImage(null); setParsedData(null); setInitialParsedData(null);
+    } catch (err: any) {
+      console.error('Save failed:', err);
+      toast.error('저장에 실패했습니다. 로그인 상태를 확인해 주세요.');
+    }
   };
 
   const recentEntries = entries.slice(0, 3);
