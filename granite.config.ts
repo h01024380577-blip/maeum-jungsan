@@ -18,5 +18,5 @@ export default defineConfig({
   webViewProps: {
     type: 'partner',
   },
-  permissions: ['CLIPBOARD', 'CAMERA', 'CONTACTS', 'NOTIFICATION'],
+  permissions: ['CLIPBOARD', 'CAMERA', 'CONTACTS', 'NOTIFICATION'] as any,
 });
