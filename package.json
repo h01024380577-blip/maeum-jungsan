@@ -4,18 +4,21 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "postinstall": "prisma generate",
-    "build": "prisma generate && next build",
+    "dev": "granite dev",
+    "build": "granite build",
+    "build:next": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@apps-in-toss/web-framework": "^2.4.1",
     "@auth/prisma-adapter": "^2.11.1",
     "@google/genai": "^1.29.0",
     "@prisma/client": "^6.19.2",
     "@supabase/supabase-js": "^2.100.1",
     "@tailwindcss/postcss": "^4.2.2",
+    "@toss/tds-mobile": "^2.3.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "dotenv": "^17.3.1",

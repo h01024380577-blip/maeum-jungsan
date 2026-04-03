@@ -10,6 +10,13 @@ export const metadata: Metadata = {
   description: "AI 기반 스마트 경조사 관리 서비스",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
