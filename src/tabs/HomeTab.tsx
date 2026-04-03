@@ -184,7 +184,7 @@ export default function HomeTab() {
       toast.success('저장 완료!');
       if (isAppsInToss()) {
         const { setSecureScreen } = await import('@apps-in-toss/web-framework');
-        setSecureScreen(false);
+        (setSecureScreen as any)(false);
       }
       setShowBottomSheet(false); setInputText(''); setInputUrl(''); setSelectedImage(null); setParsedData(null); setInitialParsedData(null);
     } catch (err: any) {
