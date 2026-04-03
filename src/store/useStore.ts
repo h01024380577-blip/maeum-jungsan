@@ -57,6 +57,35 @@ interface AppState {
   resetAnalysis: () => void;
 }
 
+
+async function getUserId(): Promise<string> {
+  // 1순위: 토스 로그인 쿠키 확인
+  try {
+    const res = await fetch('/api/auth/me');
+    if (res.ok) {
+      const { userId } = await res.json();
+      if (userId) return userId;
+    }
+  } catch {}
+
+  // 2순위: 앱인토스 SDK 기기 ID
+  try {
+    const { getDeviceId } = await import('@apps-in-toss/web-framework');
+    const deviceId = await getDeviceId();
+    if (deviceId) return deviceId;
+  } catch {}
+
+  // 3순위: localStorage fallback
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('heartbook-device-id');
+    if (stored) return stored;
+    const id = crypto.randomUUID();
+    localStorage.setItem('heartbook-device-id', id);
+    return id;
+  }
+  return 'server';
+}
+
 async function getAuthHeaders(): Promise<HeadersInit> {
   const userId = await getUserId();
   return {
