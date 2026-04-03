@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Home, Calendar as CalendarIcon, History, BarChart3, Users } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -16,8 +16,19 @@ const tabs: { key: Tab; icon: typeof Home; label: string; path: string }[] = [
   { key: 'stats', icon: BarChart3, label: '통계', path: '/stats' },
 ];
 
+function isAppsInToss(): boolean {
+  return typeof window !== 'undefined' && window.navigator.userAgent.includes('TossApp');
+}
+
 export default function Layout({ children, activeTab }: { children: React.ReactNode; activeTab: Tab }) {
   const router = useRouter();
+
+  useEffect(() => {
+    if (!isAppsInToss()) return;
+    import('@apps-in-toss/web-framework').then(({ setNavigationBar }) => {
+      setNavigationBar({ title: '마음정산', visible: true });
+    });
+  }, []);
 
   return (
     <div className="min-h-screen bg-zinc-900 flex items-center justify-center md:py-6">

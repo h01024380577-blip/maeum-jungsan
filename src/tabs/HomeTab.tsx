@@ -6,6 +6,12 @@ import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { tossLogin } from '@/src/lib/tossAuth';
 
+// 앱인토스 WebView 환경 감지
+function isAppsInToss(): boolean {
+  return typeof window !== 'undefined' &&
+    window.navigator.userAgent.includes('TossApp');
+}
+
 const eventIcon = (t: string, size = 14) => {
   if (t === 'wedding') return <Heart size={size} className="text-pink-500 fill-pink-500" />;
   if (t === 'funeral') return <Flower2 size={size} className="text-gray-400" />;
@@ -54,7 +60,13 @@ export default function HomeTab() {
     const check = async () => {
       try {
         if (document.visibilityState !== 'visible') return;
-        const text = await navigator.clipboard.readText();
+        let text = '';
+        if (isAppsInToss()) {
+          const { getClipboardText } = await import('@apps-in-toss/web-framework');
+          text = await getClipboardText();
+        } else {
+          text = await navigator.clipboard.readText();
+        }
         if (text && text !== lastClipboardText && text.length > 10) {
           if (['결혼', '부고', '장례', '초대', '모십니다', '축하'].some(k => text.includes(k))) {
             setLastClipboardText(text); setInputText(text); handleParse(text);
@@ -77,6 +89,20 @@ export default function HomeTab() {
       reader.onloadend = () => { const b64 = reader.result as string; setSelectedImage(b64); handleParse({ type: 'image', data: b64 }); };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCameraCapture = async () => {
+    if (!isAppsInToss()) { fileInputRef.current?.click(); return; }
+    const { openCamera } = await import('@apps-in-toss/web-framework');
+    const r = await openCamera();
+    if (r?.base64) { const d = `data:image/jpeg;base64,${r.base64}`; setSelectedImage(d); handleParse({ type: 'image', data: d }); }
+  };
+
+  const handleAlbumSelect = async () => {
+    if (!isAppsInToss()) { fileInputRef.current?.click(); return; }
+    const { fetchAlbumPhotos } = await import('@apps-in-toss/web-framework');
+    const r = await fetchAlbumPhotos({ limit: 1 });
+    if (r?.photos?.[0]?.base64) { const d = `data:image/jpeg;base64,${r.photos[0].base64}`; setSelectedImage(d); handleParse({ type: 'image', data: d }); }
   };
 
   const handleParse = async (params?: { type: 'text' | 'url' | 'image'; data: string } | string) => {
@@ -151,7 +177,15 @@ export default function HomeTab() {
         amount: Number(fd.amount) || 0, relation: fd.relation || '', isIncome: !!fd.isIncome, memo: fd.memo || '',
         account: fd.account || '', recommendationReason: fd.recommendationReason || '', customEventName: fd.customEventName || '',
       });
+      if (isAppsInToss()) {
+        const { generateHapticFeedback } = await import('@apps-in-toss/web-framework');
+        generateHapticFeedback({ type: 'success' });
+      }
       toast.success('저장 완료!');
+      if (isAppsInToss()) {
+        const { setSecureScreen } = await import('@apps-in-toss/web-framework');
+        setSecureScreen(false);
+      }
       setShowBottomSheet(false); setInputText(''); setInputUrl(''); setSelectedImage(null); setParsedData(null); setInitialParsedData(null);
     } catch (err: any) {
       console.error('Save failed:', err);
