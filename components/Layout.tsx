@@ -25,8 +25,8 @@ export default function Layout({ children, activeTab }: { children: React.ReactN
 
   useEffect(() => {
     if (!isAppsInToss()) return;
-    import('@apps-in-toss/web-framework').then(({ setNavigationBar }) => {
-      setNavigationBar({ title: '마음정산', visible: true });
+    import('@apps-in-toss/web-framework').then((sdk: any) => {
+      sdk.setNavigationBar?.({ title: '마음정산', visible: true });
     });
   }, []);
 
