@@ -1,18 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { SessionProvider, useSession } from "next-auth/react";
 import { useStore } from "@/src/store/useStore";
 
-function DataLoader({ children }: { children: React.ReactNode }) {
+export default function Providers({ children }: { children: React.ReactNode }) {
   const { loadFromSupabase, isLoaded } = useStore();
-  const { status } = useSession();
 
   useEffect(() => {
-    if (status !== 'loading') {
-      loadFromSupabase();
-    }
-  }, [status, loadFromSupabase]);
+    loadFromSupabase();
+  }, [loadFromSupabase]);
 
   if (!isLoaded) {
     return (
@@ -26,12 +22,4 @@ function DataLoader({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
-}
-
-export default function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <SessionProvider>
-      <DataLoader>{children}</DataLoader>
-    </SessionProvider>
-  );
 }

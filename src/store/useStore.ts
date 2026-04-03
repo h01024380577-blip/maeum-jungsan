@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { getSession } from 'next-auth/react';
+// next-auth 제거됨 - 토스 로그인으로 교체
 
 export type EventType = 'wedding' | 'funeral' | 'birthday' | 'other';
 export type TransactionType = 'INCOME' | 'EXPENSE';
@@ -65,12 +65,23 @@ interface AppState {
  * 미로그인 시 → localStorage DEVICE_ID (기기별 고유 ID, 하위 호환)
  */
 async function getUserId(): Promise<string> {
+  // 1순위: 토스 로그인 세션 (HttpOnly 쿠키 기반)
   try {
-    const session = await getSession();
-    console.log('[getUserId] session:', session?.user?.id ? 'logged in: ' + session.user.id : 'not logged in');
-    if (session?.user?.id) return session.user.id;
-  } catch (e) { console.error('[getUserId] error:', e); }
+    const res = await fetch('/api/auth/me');
+    if (res.ok) {
+      const { userId } = await res.json();
+      if (userId) return userId;
+    }
+  } catch {}
 
+  // 2순위: 앱인토스 SDK 기기 고유 ID
+  try {
+    const { getDeviceId } = await import('@apps-in-toss/web-framework');
+    const deviceId = await getDeviceId();
+    if (deviceId) return deviceId;
+  } catch {}
+
+  // 3순위: localStorage DEVICE_ID (로컬 개발 fallback)
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem('heartbook-device-id');
     if (stored) return stored;

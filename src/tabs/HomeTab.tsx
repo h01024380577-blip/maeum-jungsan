@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 import { GoogleGenAI } from "@google/genai";
 import { toast } from 'sonner';
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { tossLogin } from '@/src/lib/tossAuth';
 
 const eventIcon = (t: string, size = 14) => {
   if (t === 'wedding') return <Heart size={size} className="text-pink-500 fill-pink-500" />;
@@ -17,8 +17,8 @@ const eventIcon = (t: string, size = 14) => {
 const eventLabel = (t: string) => t === 'wedding' ? '결혼' : t === 'funeral' ? '부고' : t === 'birthday' ? '생일' : '기타';
 
 export default function HomeTab() {
-  const { entries, addEntry, addFeedback, contacts } = useStore();
-  const { data: session } = useSession();
+  const { entries, addEntry, addFeedback, contacts, loadFromSupabase } = useStore();
+  const [tossUserId, setTossUserId] = React.useState<string | null>(null);
   const [inputText, setInputText] = useState('');
   const [inputUrl, setInputUrl] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -29,6 +29,12 @@ export default function HomeTab() {
   const [showBottomSheet, setShowBottomSheet] = useState(false);
   const [lastClipboardText, setLastClipboardText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(d => {
+      if (d?.userId) setTossUserId(d.userId);
+    }).catch(() => {});
+  }, []);
 
   const checkStatus = () => {
     if (!('Notification' in window)) setNotificationStatus('unsupported');
@@ -200,24 +206,35 @@ export default function HomeTab() {
         </div>
 
         {/* 로그인 상태 */}
-        {session ? (
+        {tossUserId ? (
           <div className="flex items-center justify-between mb-4 px-1">
             <div className="flex items-center space-x-2">
-              {session.user?.image ? (
-                <img src={session.user.image} alt="" className="w-7 h-7 rounded-full" />
-              ) : (
-                <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center"><User size={14} className="text-blue-500" /></div>
-              )}
-              <span className="text-xs font-bold text-gray-600">{session.user?.name}</span>
+              <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center"><User size={14} className="text-blue-500" /></div>
+              <span className="text-xs font-bold text-gray-600">로그인됨</span>
             </div>
-            <button onClick={() => signOut()} className="text-[11px] text-gray-400 font-medium flex items-center space-x-1 hover:text-gray-600">
+            <button onClick={async () => {
+              await fetch('/api/auth/logout', { method: 'POST' });
+              setTossUserId(null);
+            }} className="text-[11px] text-gray-400 font-medium flex items-center space-x-1 hover:text-gray-600">
               <LogOut size={12} /><span>로그아웃</span>
             </button>
           </div>
         ) : (
-          <button onClick={() => signIn('kakao')} className="w-full mb-4 py-3 bg-[#FEE500] text-[#191919] rounded-xl font-bold text-sm flex items-center justify-center space-x-2 active:scale-[0.98] transition-all">
-            <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#191919" d="M9 1C4.58 1 1 3.79 1 7.21c0 2.17 1.45 4.08 3.64 5.18l-.93 3.44c-.08.3.26.54.52.37l4.12-2.74c.21.02.43.03.65.03 4.42 0 8-2.79 8-6.28C17 3.79 13.42 1 9 1"/></svg>
-            <span>카카오로 시작하기</span>
+          <button onClick={async () => {
+            const result = await tossLogin();
+            if (!result) return;
+            const res = await fetch('/api/auth/toss', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(result),
+            });
+            if (res.ok) {
+              const { userId } = await res.json();
+              setTossUserId(userId);
+              await loadFromSupabase();
+            }
+          }} className="w-full mb-4 py-3 bg-blue-500 text-white rounded-xl font-bold text-sm flex items-center justify-center space-x-2 active:scale-[0.98] transition-all">
+            <span>토스로 시작하기</span>
           </button>
         )}
 
