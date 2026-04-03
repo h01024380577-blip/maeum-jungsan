@@ -7,17 +7,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ===== 앱 모델 =====
 model User {
-  id           String   @id @default(cuid())
-  tossUserKey  String?  @unique
+  id           String    @id @default(cuid())
+  tossUserKey  String?   @unique
   name         String?
   email        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @default(now()) @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
 
+  contacts     Contact[]
   events       Event[]
   transactions Transaction[]
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  phone     String   @default("")
+  kakaoId   String?
+  relation  String   @default("")
+  avatar    String?
+  createdAt DateTime @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events Event[]
+
+  @@index([userId])
 }
 
 enum EventType {
@@ -41,6 +57,7 @@ enum Confidence {
 model Event {
   id              String     @id @default(cuid())
   userId          String
+  contactId       String?
   eventType       EventType
   targetName      String
   date            DateTime
@@ -49,11 +66,13 @@ model Event {
   sourceUrl       String?
   memo            String     @default("")
   customEventName String?
+  account         String     @default("")
   uiTheme         UiTheme    @default(DEFAULT)
   confidence      Confidence @default(MEDIUM)
   createdAt       DateTime   @default(now())
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contact      Contact?      @relation(fields: [contactId], references: [id])
   transactions Transaction[]
 
   @@index([userId])
@@ -66,15 +85,17 @@ enum TransactionType {
 }
 
 model Transaction {
-  id        String          @id @default(cuid())
-  eventId   String
-  userId    String
-  type      TransactionType
-  amount    Int
-  account   String          @default("")
-  isPaid    Boolean         @default(false)
-  paidAt    DateTime?
-  createdAt DateTime        @default(now())
+  id                   String          @id @default(cuid())
+  eventId              String
+  userId               String
+  type                 TransactionType
+  amount               Int
+  account              String          @default("")
+  relation             String          @default("")
+  recommendationReason String?
+  isPaid               Boolean         @default(false)
+  paidAt               DateTime?
+  createdAt            DateTime        @default(now())
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
