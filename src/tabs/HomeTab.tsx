@@ -101,7 +101,7 @@ export default function HomeTab() {
   const handleAlbumSelect = async () => {
     if (!isAppsInToss()) { fileInputRef.current?.click(); return; }
     const { fetchAlbumPhotos } = await import('@apps-in-toss/web-framework');
-    const r: any = await fetchAlbumPhotos({ limit: 1 });
+    const r: any = await (fetchAlbumPhotos as any)({ limit: 1 });
     if (r?.photos?.[0]?.base64) { const d = `data:image/jpeg;base64,${r.photos[0].base64}`; setSelectedImage(d); handleParse({ type: 'image', data: d }); }
   };
 
