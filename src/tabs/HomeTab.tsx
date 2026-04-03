@@ -94,14 +94,14 @@ export default function HomeTab() {
   const handleCameraCapture = async () => {
     if (!isAppsInToss()) { fileInputRef.current?.click(); return; }
     const { openCamera } = await import('@apps-in-toss/web-framework');
-    const r = await openCamera();
+    const r: any = await openCamera();
     if (r?.base64) { const d = `data:image/jpeg;base64,${r.base64}`; setSelectedImage(d); handleParse({ type: 'image', data: d }); }
   };
 
   const handleAlbumSelect = async () => {
     if (!isAppsInToss()) { fileInputRef.current?.click(); return; }
     const { fetchAlbumPhotos } = await import('@apps-in-toss/web-framework');
-    const r = await fetchAlbumPhotos({ limit: 1 });
+    const r: any = await fetchAlbumPhotos({ limit: 1 });
     if (r?.photos?.[0]?.base64) { const d = `data:image/jpeg;base64,${r.photos[0].base64}`; setSelectedImage(d); handleParse({ type: 'image', data: d }); }
   };
 
