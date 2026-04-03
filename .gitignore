@@ -11,3 +11,4 @@ coverage/
 firebase-applet-config.json
 
 /src/generated/prisma
+*.dmg
