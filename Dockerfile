@@ -12,7 +12,6 @@ FROM base AS runner
 ENV NODE_ENV=production
 RUN npm ci --only=production --legacy-peer-deps && npx prisma generate
 COPY --from=builder /app/.next    ./.next
-COPY --from=builder /app/dist     ./dist
 COPY --from=builder /app/public   ./public
 COPY --from=builder /app/prisma   ./prisma
 COPY --from=builder /app/package.json .
