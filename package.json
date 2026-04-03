@@ -15,7 +15,6 @@
     "@apps-in-toss/web-framework": "^2.4.1",
     "@google/genai": "^1.29.0",
     "@prisma/client": "^6.19.2",
-    "@supabase/supabase-js": "^2.100.1",
     "@tailwindcss/postcss": "^4.2.2",
     "@toss/tds-mobile": "^2.3.0",
     "clsx": "^2.1.1",
