@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, LogIn, LogOut, User } from 'lucide-react';
+import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, LogIn, LogOut, User, Copy } from 'lucide-react';
 import { useStore, EventEntry, EventType } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
@@ -182,6 +182,25 @@ export default function HomeTab() {
         generateHapticFeedback({ type: 'success' });
       }
       toast.success('저장 완료!');
+
+      // 계좌번호가 있으면 토스 송금 안내
+      if (fd.account && fd.account.trim() && fd.type !== 'INCOME') {
+        const goToTransfer = window.confirm('토스로 송금하시겠습니까?\n계좌번호가 클립보드에 복사됩니다.');
+        if (goToTransfer) {
+          try {
+            if (isAppsInToss()) {
+              const { setClipboardText } = await import('@apps-in-toss/web-framework');
+              await (setClipboardText as any)(fd.account);
+            } else {
+              await navigator.clipboard.writeText(fd.account);
+            }
+            // 토스 앱 송금 화면으로 이동
+            window.location.href = 'supertoss://send';
+          } catch {
+            toast.error('토스 앱을 열 수 없습니다.');
+          }
+        }
+      }
       if (isAppsInToss()) {
         const { setSecureScreen } = await import('@apps-in-toss/web-framework');
         (setSecureScreen as any)(false);
@@ -446,7 +465,31 @@ export default function HomeTab() {
                     ))}
                   </div>
                 </div>
-                <Field label="계좌번호" value={parsedData.account} ai={!!initialParsedData?.account} onChange={(v: string) => setParsedData({...parsedData, account: v})} />
+                {/* 계좌번호 + 복사 버튼 */}
+                <div className="space-y-1 relative">
+                  <div className="flex items-center justify-between ml-0.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">계좌번호</label>
+                    {initialParsedData?.account && <span className="text-[8px] font-bold text-blue-500 flex items-center"><Sparkles size={7} className="mr-0.5" /> AI</span>}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input type="text" value={parsedData.account || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setParsedData({...parsedData, account: e.target.value})} className={`flex-1 p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 ${initialParsedData?.account ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
+                    {parsedData.account && parsedData.account.trim() && (
+                      <button onClick={async () => {
+                        try {
+                          if (isAppsInToss()) {
+                            const { setClipboardText } = await import('@apps-in-toss/web-framework');
+                            await (setClipboardText as any)(parsedData.account);
+                          } else {
+                            await navigator.clipboard.writeText(parsedData.account || '');
+                          }
+                          toast.success('계좌번호가 복사되었습니다');
+                        } catch { toast.error('복사 실패'); }
+                      }} className="px-3 py-3 bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center space-x-1 active:scale-95 transition-all shrink-0">
+                        <Copy size={12} /><span>복사</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <button onClick={() => handleSave(parsedData)} disabled={!parsedData.targetName?.trim()} className={`w-full py-4 rounded-2xl font-bold text-base mt-4 active:scale-[0.98] transition-all ${!parsedData.targetName?.trim() ? 'bg-gray-100 text-gray-300' : 'bg-blue-500 text-white shadow-lg shadow-blue-200'}`}>
