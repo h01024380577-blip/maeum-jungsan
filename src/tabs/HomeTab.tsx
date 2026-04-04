@@ -59,6 +59,8 @@ export default function HomeTab() {
   const [parsedData, setParsedData] = useState<Partial<EventEntry> | null>(null);
   const [initialParsedData, setInitialParsedData] = useState<Partial<EventEntry> | null>(null);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [savedAccount, setSavedAccount] = useState('');
   const [lastClipboardText, setLastClipboardText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -210,18 +212,10 @@ export default function HomeTab() {
       }
       toast.success('저장 완료!');
 
-      // 계좌번호가 있으면 토스 송금 안내
+      // 계좌번호가 있으면 토스페이 송금 모달 표시
       if (fd.account && fd.account.trim() && fd.type !== 'INCOME') {
-        const goToTransfer = window.confirm('토스로 송금하시겠습니까?\n계좌번호가 클립보드에 복사됩니다.');
-        if (goToTransfer) {
-          try {
-            await copyToClipboard(fd.account);
-            // 토스 앱 송금 화면으로 이동
-            window.location.href = 'supertoss://send';
-          } catch {
-            toast.error('토스 앱을 열 수 없습니다.');
-          }
-        }
+        setSavedAccount(fd.account);
+        setShowTransferModal(true);
       }
       if (isAppsInToss()) {
         const { setSecureScreen } = await import('@apps-in-toss/web-framework');
@@ -512,6 +506,48 @@ export default function HomeTab() {
               <button onClick={() => handleSave(parsedData)} disabled={!parsedData.targetName?.trim()} className={`w-full py-4 rounded-2xl font-bold text-base mt-4 active:scale-[0.98] transition-all ${!parsedData.targetName?.trim() ? 'bg-gray-100 text-gray-300' : 'bg-blue-500 text-white shadow-lg shadow-blue-200'}`}>
                 저장하기
               </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      {/* 토스페이 송금 모달 */}
+      <AnimatePresence>
+        {showTransferModal && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowTransferModal(false)} className="fixed inset-0 bg-black/40 z-[80]" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] max-w-[360px] bg-white rounded-3xl p-6 z-[90] shadow-2xl">
+              <div className="text-center space-y-4">
+                <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto">
+                  <Wallet size={28} className="text-blue-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-gray-900">토스페이로 송금</h3>
+                  <p className="text-sm text-gray-400 mt-1">계좌번호를 복사하고<br/>토스페이 송금 화면으로 이동합니다</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-400 mb-1">계좌번호</p>
+                  <p className="text-sm font-bold text-gray-800">{savedAccount}</p>
+                </div>
+                <div className="flex space-x-2 pt-2">
+                  <button onClick={() => setShowTransferModal(false)} className="flex-1 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm active:scale-95 transition-all">
+                    닫기
+                  </button>
+                  <button onClick={async () => {
+                    try {
+                      await copyToClipboard(savedAccount);
+                      toast.success('계좌번호가 복사되었습니다');
+                      setShowTransferModal(false);
+                      setTimeout(() => {
+                        window.location.href = 'supertoss://send';
+                      }, 300);
+                    } catch {
+                      toast.error('토스 앱을 열 수 없습니다.');
+                    }
+                  }} className="flex-[2] py-3.5 bg-blue-500 text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-lg shadow-blue-200">
+                    송금하기
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </>
         )}
