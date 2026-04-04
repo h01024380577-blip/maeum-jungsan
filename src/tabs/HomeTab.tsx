@@ -6,6 +6,33 @@ import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { tossLogin } from '@/src/lib/tossAuth';
 
+
+// HTTP 환경에서도 동작하는 클립보드 복사
+async function copyToClipboard(text: string): Promise<void> {
+  // 앱인토스 환경
+  if (isAppsInToss()) {
+    const { setClipboardText } = await import('@apps-in-toss/web-framework');
+    await (setClipboardText as any)(text);
+    return;
+  }
+  // HTTPS 환경
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  // HTTP fallback (execCommand)
+  const el = document.createElement('textarea');
+  el.value = text;
+  el.style.position = 'fixed';
+  el.style.opacity = '0';
+  document.body.appendChild(el);
+  el.focus();
+  el.select();
+  const ok = document.execCommand('copy');
+  document.body.removeChild(el);
+  if (!ok) throw new Error('copy failed');
+}
+
 // 앱인토스 WebView 환경 감지
 function isAppsInToss(): boolean {
   return typeof window !== 'undefined' &&
@@ -188,12 +215,7 @@ export default function HomeTab() {
         const goToTransfer = window.confirm('토스로 송금하시겠습니까?\n계좌번호가 클립보드에 복사됩니다.');
         if (goToTransfer) {
           try {
-            if (isAppsInToss()) {
-              const { setClipboardText } = await import('@apps-in-toss/web-framework');
-              await (setClipboardText as any)(fd.account);
-            } else {
-              await navigator.clipboard.writeText(fd.account);
-            }
+            await copyToClipboard(fd.account);
             // 토스 앱 송금 화면으로 이동
             window.location.href = 'supertoss://send';
           } catch {
@@ -476,12 +498,7 @@ export default function HomeTab() {
                     {parsedData.account && parsedData.account.trim() && (
                       <button onClick={async () => {
                         try {
-                          if (isAppsInToss()) {
-                            const { setClipboardText } = await import('@apps-in-toss/web-framework');
-                            await (setClipboardText as any)(parsedData.account);
-                          } else {
-                            await navigator.clipboard.writeText(parsedData.account || '');
-                          }
+                          await copyToClipboard(parsedData.account || '');
                           toast.success('계좌번호가 복사되었습니다');
                         } catch { toast.error('복사 실패'); }
                       }} className="px-3 py-3 bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center space-x-1 active:scale-95 transition-all shrink-0">
