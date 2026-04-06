@@ -573,9 +573,18 @@ export default function HomeTab() {
                       await copyToClipboard(savedAccount);
                       toast.success('계좌번호가 복사되었습니다');
                       setShowTransferModal(false);
-                      setTimeout(() => {
-                        // 토스 앱 송금 화면으로 이동 (복사된 계좌번호를 붙여넣기)
-                        window.location.href = 'supertoss://send';
+                      setTimeout(async () => {
+                        // 토스 앱 송금 화면으로 이동
+                        try {
+                          if (isAppsInToss()) {
+                            const { openURL } = await import('@apps-in-toss/web-framework');
+                            await openURL('supertoss://send');
+                          } else {
+                            window.location.href = 'supertoss://send';
+                          }
+                        } catch {
+                          // 스킴 열기 실패 시 무시 (계좌번호는 이미 복사됨)
+                        }
                       }, 300);
                     } catch {
                       toast.error('토스 앱을 열 수 없습니다.');
