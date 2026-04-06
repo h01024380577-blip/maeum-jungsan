@@ -12,3 +12,10 @@ firebase-applet-config.json
 
 /src/generated/prisma
 *.dmg
+
+# 인증서/키 파일
+*.key
+*.crt
+*.pem
+*.p12
+*.pfx
