@@ -212,6 +212,7 @@ export default function HomeTab() {
 
   const handleManualEntry = () => {
     const d: any = { targetName: '', date: format(new Date(), 'yyyy-MM-dd'), eventType: 'wedding', location: '', relation: '', amount: 50000, type: 'EXPENSE', isIncome: false, recommendationReason: "직접 입력" };
+    setInputText(''); setInputUrl(''); setSelectedImage(null);
     setParsedData(d); setInitialParsedData(null); setShowBottomSheet(true);
   };
 
@@ -238,10 +239,6 @@ export default function HomeTab() {
       if (fd.account && fd.account.trim() && fd.type !== 'INCOME') {
         setSavedAccount(fd.account);
         setShowTransferModal(true);
-      }
-      if (isAppsInToss()) {
-        const { setSecureScreen } = await import('@apps-in-toss/web-framework');
-        (setSecureScreen as any)(false);
       }
       setShowBottomSheet(false); setInputText(''); setInputUrl(''); setSelectedImage(null); setParsedData(null); setInitialParsedData(null);
     } catch (err: any) {
