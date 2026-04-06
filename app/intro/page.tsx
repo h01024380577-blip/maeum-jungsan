@@ -33,7 +33,7 @@ export default function IntroPage() {
         <div className="w-full space-y-3 text-left">
           {[
             { icon: Sparkles, title: 'AI 자동 분석', desc: '청첩장 링크·이미지로 정보 자동 입력' },
-            { icon: Heart, title: '관계 관리', desc: '인맥별 경조사 내역 한눈에 확인' },
+            { icon: Heart, title: '관계 관리', desc: '연락처별 경조사 내역 한눈에 확인' },
             { icon: Shield, title: '안전한 보관', desc: '내 데이터는 나만 볼 수 있어요' },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-2xl">

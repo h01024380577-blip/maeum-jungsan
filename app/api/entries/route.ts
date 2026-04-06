@@ -46,14 +46,20 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await req.json();
   const result = await prisma.$transaction(async (tx: any) => {
-    // userId가 User 테이블에 없으면 자동 생성 (비로그인 게스트)
-    const user = await tx.user.upsert({
-      where: { tossUserKey: userId },
-      update: {},
-      create: { tossUserKey: userId },
-      select: { id: true },
-    });
-    const realUserId = user.id;
+    // 로그인 사용자: toss_user_id 쿠키 = DB user.id
+    // 비로그인 게스트: x-user-id 헤더 = device ID
+    let realUserId = userId;
+    const isLoggedIn = !!req.cookies.get('toss_user_id')?.value;
+    if (!isLoggedIn) {
+      // 비로그인 게스트만 upsert 필요
+      const user = await tx.user.upsert({
+        where: { tossUserKey: userId },
+        update: {},
+        create: { tossUserKey: userId },
+        select: { id: true },
+      });
+      realUserId = user.id;
+    }
     let contactId = body.contactId || null;
     if (!contactId && body.targetName) {
       const existing = await tx.contact.findFirst({ where: { userId: realUserId, name: body.targetName } });

@@ -22,14 +22,18 @@ export async function POST(req: NextRequest) {
   const userId = getUserId(req);
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await req.json();
-  // userId가 User 테이블에 없으면 자동 생성 (샌드박스/비로그인 환경 대응)
-  const user = await prisma.user.upsert({
-    where: { tossUserKey: userId },
-    update: {},
-    create: { tossUserKey: userId },
-    select: { id: true },
-  });
-  const realUserId = user.id;
+  // 로그인 사용자: userId = DB user.id, 비로그인: userId = device ID
+  let realUserId = userId;
+  const isLoggedIn = !!req.cookies.get('toss_user_id')?.value;
+  if (!isLoggedIn) {
+    const user = await prisma.user.upsert({
+      where: { tossUserKey: userId },
+      update: {},
+      create: { tossUserKey: userId },
+      select: { id: true },
+    });
+    realUserId = user.id;
+  }
   const contact = await prisma.contact.create({ data: { userId: realUserId, name: body.name, phone: body.phone ?? '', kakaoId: body.kakaoId ?? null, relation: body.relation ?? '', avatar: body.avatar ?? null } });
   return NextResponse.json({ contact: toContact(contact), id: contact.id });
 }

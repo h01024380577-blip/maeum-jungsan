@@ -11,7 +11,7 @@ const tabs: { key: Tab; icon: typeof Home; label: string; path: string }[] = [
   { key: 'home', icon: Home, label: '홈', path: '/' },
   { key: 'calendar', icon: CalendarIcon, label: '달력', path: '/calendar' },
   { key: 'history', icon: History, label: '내역', path: '/history' },
-  { key: 'contacts', icon: Users, label: '인맥', path: '/contacts' },
+  { key: 'contacts', icon: Users, label: '연락처', path: '/contacts' },
   { key: 'stats', icon: BarChart3, label: '통계', path: '/stats' },
 ];
 
