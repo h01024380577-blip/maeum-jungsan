@@ -29,10 +29,14 @@ function createMtlsAgent(): https.Agent | undefined {
   }
 }
 
-let _agent: https.Agent | undefined | null = null;
+let _agent: https.Agent | undefined;
+let _agentChecked = false;
 function getAgent(): https.Agent | undefined {
-  if (_agent === null) _agent = createMtlsAgent();
-  return _agent ?? undefined;
+  if (!_agentChecked) {
+    _agent = createMtlsAgent();
+    if (_agent) _agentChecked = true; // 성공하면 캐시, 실패하면 다음에 재시도
+  }
+  return _agent;
 }
 
 // https.request 기반 fetch 래퍼 (mTLS 지원)
