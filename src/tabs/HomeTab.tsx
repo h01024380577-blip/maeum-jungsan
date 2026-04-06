@@ -508,7 +508,7 @@ export default function HomeTab() {
                     <span className="text-[8px] font-black text-white bg-blue-500 px-2 py-0.5 rounded-full">AI 추천</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <input type="number" step="10000" value={parsedData.amount} onChange={(e) => setParsedData({...parsedData, amount: Number(e.target.value)})} className="flex-1 bg-transparent text-2xl font-black text-blue-700 outline-none" />
+                    <input type="number" step="10000" value={parsedData.amount} onChange={(e) => setParsedData({...parsedData, amount: Number(e.target.value)})} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="flex-1 bg-transparent text-2xl font-black text-blue-700 outline-none" />
                     <span className="text-base font-bold text-blue-500">원</span>
                   </div>
                   <div className="flex space-x-1.5 sm:space-x-2 mt-3">
@@ -775,7 +775,7 @@ function Field({ label, value, onChange, type = 'text', options = [], ai = false
         </select>
       ) : type === 'contact' ? (
         <div className="relative">
-          <input type="text" value={value || ''} placeholder={placeholder} onFocus={() => setShow(true)} onBlur={() => setTimeout(() => setShow(false), 200)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
+          <input type="text" value={value || ''} placeholder={placeholder} onFocus={() => setShow(true)} onBlur={() => setTimeout(() => setShow(false), 200)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
           {show && contacts.length > 0 && (
             <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-50 max-h-32 overflow-y-auto">
               {contacts.filter((c: any) => c.name.toLowerCase().includes((value || '').toLowerCase())).map((c: any) => (
@@ -787,7 +787,7 @@ function Field({ label, value, onChange, type = 'text', options = [], ai = false
       ) : type === 'date' ? (
         <input type="date" value={value || ''} placeholder="yyyy-MM-dd" onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 appearance-none min-w-0 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
       ) : (
-        <input type={type} value={value || ''} placeholder={placeholder} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
+        <input type={type} value={value || ''} placeholder={placeholder} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
       )}
     </div>
   );
