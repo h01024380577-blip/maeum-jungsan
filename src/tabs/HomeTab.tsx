@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, LogIn, LogOut, User, Copy } from 'lucide-react';
+import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, LogIn, LogOut, User, Copy, HelpCircle, MessageSquare, Info } from 'lucide-react';
 import { useStore, EventEntry, EventType } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
@@ -70,6 +70,8 @@ export default function HomeTab() {
   const [initialParsedData, setInitialParsedData] = useState<Partial<EventEntry> | null>(null);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [savedAccount, setSavedAccount] = useState('');
   const [lastClipboardText, setLastClipboardText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -245,16 +247,10 @@ export default function HomeTab() {
       {/* Header */}
       <div className="px-5 pt-14 pb-6 bg-white">
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-2.5">
-            <h1 className="text-[22px] font-black text-gray-900 tracking-tight">마음정산 AI</h1>
-            <button onClick={sendTestPush} className="p-1.5 text-gray-300 hover:text-gray-500 transition-colors"><Bell size={18} /></button>
-            <button onClick={requestNotificationPermission} className={`p-1.5 transition-colors ${notificationStatus === 'granted' ? 'text-green-500' : notificationStatus === 'denied' ? 'text-red-400' : 'text-gray-300 hover:text-gray-500'}`}>
-              <Settings size={18} />
-            </button>
-          </div>
-          <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
-            <Sparkles size={18} className="text-blue-500" />
-          </div>
+          <h1 className="text-[22px] font-black text-gray-900 tracking-tight">마음정산 AI</h1>
+          <button onClick={() => setShowSettings(true)} className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+            <Settings size={20} />
+          </button>
         </div>
 
         {/* 로그인 상태 */}
@@ -557,6 +553,105 @@ export default function HomeTab() {
                   }} className="flex-[2] py-3.5 bg-blue-500 text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-lg shadow-blue-200">
                     토스로 송금하기
                   </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* 설정 바텀시트 */}
+      <AnimatePresence>
+        {showSettings && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSettings(false)} className="fixed inset-0 bg-black/40 z-[80]" />
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 28, stiffness: 220 }} className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white rounded-t-[28px] px-5 py-5 z-[90] shadow-2xl">
+              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-lg font-black text-gray-900">설정</h3>
+                <button onClick={() => setShowSettings(false)} className="p-2 text-gray-400 hover:text-gray-600"><CloseIcon size={18} /></button>
+              </div>
+
+              <div className="space-y-3 max-h-[65vh] overflow-y-auto pb-4 no-scrollbar">
+                {/* 알림 설정 */}
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                        <Bell size={16} className={notificationStatus === 'granted' ? 'text-green-500' : notificationStatus === 'denied' ? 'text-red-400' : 'text-gray-400'} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-800">알림 설정</p>
+                        <p className="text-[11px] text-gray-400">
+                          {notificationStatus === 'granted' ? '알림 허용됨' : notificationStatus === 'denied' ? '알림 차단됨' : notificationStatus === 'unsupported' ? '미지원 브라우저' : '알림 미설정'}
+                        </p>
+                      </div>
+                    </div>
+                    <button onClick={requestNotificationPermission} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-bold active:scale-95 transition-all">
+                      {notificationStatus === 'granted' ? '설정됨' : '허용하기'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* FAQ */}
+                <div className="bg-gray-50 rounded-2xl overflow-hidden">
+                  <div className="flex items-center space-x-3 p-4 pb-3">
+                    <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                      <HelpCircle size={16} className="text-gray-400" />
+                    </div>
+                    <p className="text-sm font-bold text-gray-800">자주 묻는 질문</p>
+                  </div>
+                  <div className="px-4 pb-3 space-y-1">
+                    {[
+                      { q: 'AI 분석이 정확하지 않아요', a: 'AI가 텍스트나 이미지에서 정보를 추출하지만 오류가 있을 수 있습니다. 분석 결과 화면에서 직접 수정 후 저장하세요.' },
+                      { q: '데이터가 사라졌어요', a: '토스 로그인 후 데이터가 서버에 저장됩니다. 로그인 상태를 확인해 주세요.' },
+                      { q: '토스페이 송금이 안 돼요', a: '토스 앱이 설치된 환경에서만 동작합니다. 계좌번호를 복사 후 토스 앱에서 직접 송금하세요.' },
+                      { q: '연락처 불러오기가 안 돼요', a: '앱인토스 환경에서만 연락처 접근이 가능합니다. 토스 앱 내에서 실행해 주세요.' },
+                    ].map((item, i) => (
+                      <div key={i} className="bg-white rounded-xl overflow-hidden">
+                        <button onClick={() => setOpenFaqIndex(openFaqIndex === i ? null : i)} className="w-full flex items-center justify-between px-3.5 py-3 text-left">
+                          <span className="text-xs font-bold text-gray-700">{item.q}</span>
+                          <ChevronRight size={14} className={"text-gray-300 transition-transform " + (openFaqIndex === i ? "rotate-90" : "")} />
+                        </button>
+                        {openFaqIndex === i && (
+                          <div className="px-3.5 pb-3">
+                            <p className="text-[11px] text-gray-500 leading-relaxed">{item.a}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 개발자 의견 */}
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                        <MessageSquare size={16} className="text-gray-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-800">개발자에게 의견 보내기</p>
+                        <p className="text-[11px] text-gray-400">불편한 점이나 개선 아이디어를 알려주세요</p>
+                      </div>
+                    </div>
+                    <a href="mailto:feedback@maeum-jungsan.com" className="px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-xs font-bold active:scale-95 transition-all">
+                      보내기
+                    </a>
+                  </div>
+                </div>
+
+                {/* 버전 정보 */}
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                      <Info size={16} className="text-gray-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">마음정산 v1.0.0</p>
+                      <p className="text-[11px] text-gray-400">경조사 스마트 관리 앱</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </motion.div>
