@@ -60,7 +60,15 @@ export async function POST(req: NextRequest) {
   });
 
   const res = NextResponse.json({ ok: true, userId: user.id });
+  // DB userId (내부 식별용)
   res.cookies.set('toss_user_id', user.id, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 14,
+  });
+  // 토스 원본 userKey (토스페이 API x-toss-user-key 헤더용)
+  res.cookies.set('toss_user_key', String(userKey), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
