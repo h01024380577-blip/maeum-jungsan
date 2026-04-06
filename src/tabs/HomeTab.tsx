@@ -72,6 +72,9 @@ export default function HomeTab() {
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+  const [testMsgCode, setTestMsgCode] = useState('');
+  const [testMsgDeployId, setTestMsgDeployId] = useState('');
+  const [isSendingTestMsg, setIsSendingTestMsg] = useState(false);
   const [savedAccount, setSavedAccount] = useState('');
   const [lastClipboardText, setLastClipboardText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -639,6 +642,66 @@ export default function HomeTab() {
                       보내기
                     </a>
                   </div>
+                </div>
+
+                {/* 테스트 메시지 발송 */}
+                <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                      <Send size={16} className="text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">테스트 메시지 발송</p>
+                      <p className="text-[11px] text-gray-400">앱인토스 콘솔에서 발급한 값을 입력하세요</p>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    value={testMsgCode}
+                    onChange={(e) => setTestMsgCode(e.target.value)}
+                    placeholder="templateSetCode"
+                    className="w-full px-3 py-2.5 bg-white rounded-xl text-xs font-medium outline-none border border-gray-200 placeholder:text-gray-300"
+                  />
+                  <input
+                    type="text"
+                    value={testMsgDeployId}
+                    onChange={(e) => setTestMsgDeployId(e.target.value)}
+                    placeholder="deploymentId (UUID)"
+                    className="w-full px-3 py-2.5 bg-white rounded-xl text-xs font-medium outline-none border border-gray-200 placeholder:text-gray-300"
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!testMsgCode.trim() || !testMsgDeployId.trim()) {
+                        toast.error('templateSetCode와 deploymentId를 입력해 주세요.');
+                        return;
+                      }
+                      setIsSendingTestMsg(true);
+                      try {
+                        const res = await fetch('/api/test-message', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ templateSetCode: testMsgCode, deploymentId: testMsgDeployId }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                          toast.error(`발송 실패: ${data.error || '알 수 없는 오류'}`);
+                        } else {
+                          toast.success('테스트 메시지가 발송됐습니다.');
+                        }
+                      } catch {
+                        toast.error('네트워크 오류가 발생했습니다.');
+                      } finally {
+                        setIsSendingTestMsg(false);
+                      }
+                    }}
+                    disabled={isSendingTestMsg || !testMsgCode.trim() || !testMsgDeployId.trim()}
+                    className="w-full py-2.5 bg-blue-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all disabled:bg-gray-200 disabled:text-gray-400 flex items-center justify-center space-x-1.5"
+                  >
+                    {isSendingTestMsg
+                      ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      : <><Send size={12} /><span>테스트 메시지 발송</span></>
+                    }
+                  </button>
                 </div>
 
                 {/* 버전 정보 */}

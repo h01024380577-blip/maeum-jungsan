@@ -1,0 +1,38 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+const TOSS_API_BASE = 'https://apps-in-toss-api.toss.im';
+
+export async function POST(req: NextRequest) {
+  const userKey = req.cookies.get('toss_user_key')?.value;
+  if (!userKey) {
+    return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+  }
+
+  const { templateSetCode, deploymentId, context } = await req.json();
+  if (!templateSetCode || !deploymentId) {
+    return NextResponse.json({ error: 'templateSetCode와 deploymentId가 필요합니다.' }, { status: 400 });
+  }
+
+  const res = await fetch(
+    `${TOSS_API_BASE}/api-partner/v1/apps-in-toss/messenger/send-test-message`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-toss-user-key': userKey,
+      },
+      body: JSON.stringify({
+        templateSetCode,
+        deploymentId,
+        context: context || {},
+      }),
+    }
+  );
+
+  const data = await res.json();
+  if (!res.ok) {
+    return NextResponse.json({ error: '발송 실패', detail: data }, { status: res.status });
+  }
+
+  return NextResponse.json({ ok: true, result: data });
+}
