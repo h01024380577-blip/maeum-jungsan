@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     await tx.user.upsert({
       where: { id: userId },
       update: {},
-      create: { id: userId },
+      create: { id: userId, tossUserKey: userId },
     });
     let contactId = body.contactId || null;
     if (!contactId && body.targetName) {
