@@ -3,7 +3,30 @@ import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as
 import { useStore, EventEntry, EventType } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
-import { toast } from 'sonner';
+// 앱인토스 WebView 호환 커스텀 토스트
+const toastState = { el: null as HTMLDivElement | null, timer: null as any };
+function showToast(msg: string, type: 'success' | 'error' = 'success') {
+  if (typeof document === 'undefined') return;
+  if (toastState.el) { document.body.removeChild(toastState.el); clearTimeout(toastState.timer); }
+  const el = document.createElement('div');
+  el.textContent = msg;
+  Object.assign(el.style, {
+    position: 'fixed', top: '60px', left: '50%', transform: 'translateX(-50%)',
+    padding: '12px 20px', borderRadius: '14px', fontSize: '13px', fontWeight: '600',
+    fontFamily: '-apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+    color: '#fff', background: type === 'success' ? '#22c55e' : '#ef4444',
+    zIndex: '99999', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', whiteSpace: 'nowrap',
+    transition: 'opacity 0.3s', opacity: '0',
+  });
+  document.body.appendChild(el);
+  requestAnimationFrame(() => { el.style.opacity = '1'; });
+  toastState.el = el;
+  toastState.timer = setTimeout(() => {
+    el.style.opacity = '0';
+    setTimeout(() => { try { document.body.removeChild(el); } catch {} toastState.el = null; }, 300);
+  }, 2500);
+}
+const toast = { success: (m: string) => showToast(m, 'success'), error: (m: string) => showToast(m, 'error') };
 import { tossLogin } from '@/src/lib/tossAuth';
 
 
