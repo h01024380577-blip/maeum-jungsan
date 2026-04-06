@@ -5,7 +5,7 @@ export default defineConfig({
   brand: {
     displayName: '마음정산',
     primaryColor: '#3B82F6',
-    icon: '',  // 콘솔에서 앱 아이콘 업로드 후 URL로 교체
+    icon: 'http://3.37.76.233:3000/icon.png',
   },
   web: {
     host: 'localhost',
