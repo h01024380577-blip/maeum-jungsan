@@ -135,8 +135,14 @@ export const useStore = create<AppState>()((set, get) => ({
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Entry 저장 실패');
     }
-    const { entry: saved } = await res.json();
-    set(state => ({ entries: [saved, ...state.entries] }));
+    const { entry: saved, contact: newContact } = await res.json();
+    set(state => {
+      // 새로 생성된 contact가 있고 아직 store에 없으면 추가
+      const contacts = newContact && !state.contacts.find(c => c.id === newContact.id)
+        ? [...state.contacts, newContact]
+        : state.contacts;
+      return { entries: [saved, ...state.entries], contacts };
+    });
   },
 
   removeEntry: async (id) => {

@@ -67,9 +67,23 @@ export async function POST(req: NextRequest) {
     }
     const event = await tx.event.create({ data: { userId: realUserId, contactId, eventType: body.eventType.toUpperCase(), targetName: body.targetName, date: new Date(body.date), location: body.location ?? '', relation: body.relation ?? '', memo: body.memo ?? '', account: body.account ?? '', customEventName: body.customEventName ?? null } });
     const transaction = await tx.transaction.create({ data: { eventId: event.id, userId: realUserId, type: body.type ?? 'EXPENSE', amount: Number(body.amount) || 0, account: body.account ?? '', relation: body.relation ?? '', recommendationReason: body.recommendationReason ?? '' } });
-    return { event, transaction };
+    // 생성/조회된 contact 정보 반환 (클라이언트 store 동기화용)
+    let contact = null;
+    if (contactId) {
+      contact = await tx.contact.findUnique({ where: { id: contactId } });
+    }
+    return { event, transaction, contact };
   });
-  return NextResponse.json({ entry: toEventEntry(result.event, result.transaction) });
+  return NextResponse.json({
+    entry: toEventEntry(result.event, result.transaction),
+    contact: result.contact ? {
+      id: result.contact.id,
+      name: result.contact.name,
+      phone: result.contact.phone ?? '',
+      relation: result.contact.relation ?? '',
+      userId: result.contact.userId,
+    } : null,
+  });
 }
 
 export async function DELETE(req: NextRequest) {
