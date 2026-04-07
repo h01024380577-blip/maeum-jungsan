@@ -653,7 +653,7 @@ export default function HomeTab() {
                         navigator.clipboard.writeText('feedback@maeum-jungsan.com').then(() => {
                           toast.success('이메일 주소가 복사되었습니다');
                         }).catch(() => {
-                          toast.info('feedback@maeum-jungsan.com');
+                          toast.success('feedback@maeum-jungsan.com');
                         });
                       }}
                       className="px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-xs font-bold active:scale-95 transition-all"
