@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
+import { corsResponse, withCors } from '@/src/lib/cors';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+
+export async function OPTIONS(req: NextRequest) {
+  return corsResponse(req);
+}
 
 const SYSTEM_INSTRUCTION = `Extract event info in JSON only.
 Fields: eventType("wedding"|"funeral"|"birthday"|"other"),
@@ -39,22 +44,22 @@ export async function POST(req: NextRequest) {
       responseText = r.text ?? '{}';
 
     } else if (type === 'url') {
-      const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+      const base = process.env.APP_URL ?? 'http://localhost:3000';
       const res = await fetch(`${base}/api/parse-url`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: data }),
       });
-      return NextResponse.json(await res.json());
+      return withCors(req, NextResponse.json(await res.json()));
     }
 
-    return NextResponse.json({ success: true, data: JSON.parse(responseText) });
+    return withCors(req, NextResponse.json({ success: true, data: JSON.parse(responseText) }));
 
   } catch (e: any) {
     const isRateLimit = e?.message?.includes('429') || e?.message?.includes('RESOURCE_EXHAUSTED');
-    return NextResponse.json(
+    return withCors(req, NextResponse.json(
       { success: false, reason: isRateLimit ? 'rate_limit' : 'parse_error' },
       { status: isRateLimit ? 429 : 500 }
-    );
+    ));
   }
 }

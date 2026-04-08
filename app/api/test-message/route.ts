@@ -1,16 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyJwt } from '@/src/lib/jwt';
+import { corsResponse, withCors } from '@/src/lib/cors';
 
 const TOSS_API_BASE = 'https://apps-in-toss-api.toss.im';
 
+export async function OPTIONS(req: NextRequest) {
+  return corsResponse(req);
+}
+
 export async function POST(req: NextRequest) {
-  const userKey = req.cookies.get('toss_user_key')?.value;
+  let userKey = req.cookies.get('toss_user_key')?.value;
+  const authHeader = req.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const jwt = verifyJwt(authHeader.slice(7));
+    if (jwt) userKey = jwt.userKey;
+  }
+
   if (!userKey) {
-    return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+    return withCors(req, NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 }));
   }
 
   const { templateSetCode, deploymentId, context } = await req.json();
   if (!templateSetCode || !deploymentId) {
-    return NextResponse.json({ error: 'templateSetCode와 deploymentId가 필요합니다.' }, { status: 400 });
+    return withCors(req, NextResponse.json({ error: 'templateSetCode와 deploymentId가 필요합니다.' }, { status: 400 }));
   }
 
   const res = await fetch(
@@ -31,8 +43,8 @@ export async function POST(req: NextRequest) {
 
   const data = await res.json();
   if (!res.ok) {
-    return NextResponse.json({ error: '발송 실패', detail: data }, { status: res.status });
+    return withCors(req, NextResponse.json({ error: '발송 실패', detail: data }, { status: res.status }));
   }
 
-  return NextResponse.json({ ok: true, result: data });
+  return withCors(req, NextResponse.json({ ok: true, result: data }));
 }

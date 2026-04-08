@@ -1,25 +1,30 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/prisma';
 import { resolveUiTheme, validateCreateEventInput } from '@/src/lib/events';
 import { getAuthenticatedUserId } from '@/src/lib/apiAuth';
+import { corsResponse, withCors } from '@/src/lib/cors';
 
-export async function POST(request: Request) {
+export async function OPTIONS(req: NextRequest) {
+  return corsResponse(req);
+}
+
+export async function POST(request: NextRequest) {
   try {
     const userId = await getAuthenticatedUserId();
     if (!userId) {
-      return NextResponse.json(
+      return withCors(request, NextResponse.json(
         { success: false, message: '로그인이 필요합니다.' },
         { status: 401 },
-      );
+      ));
     }
 
     const body = await request.json();
     const validation = validateCreateEventInput(body);
     if (!validation.valid) {
-      return NextResponse.json(
+      return withCors(request, NextResponse.json(
         { success: false, message: validation.message },
         { status: 400 },
-      );
+      ));
     }
 
     const uiTheme = resolveUiTheme(body.eventType);
@@ -57,7 +62,7 @@ export async function POST(request: Request) {
       return { event, transaction };
     });
 
-    return NextResponse.json({
+    return withCors(request, NextResponse.json({
       success: true,
       event: {
         id: result.event.id,
@@ -70,24 +75,24 @@ export async function POST(request: Request) {
       transaction: result.transaction
         ? { id: result.transaction.id, amount: result.transaction.amount, type: result.transaction.type }
         : null,
-    });
+    }));
   } catch (err: any) {
     console.error('[events] POST error:', err?.message);
-    return NextResponse.json(
+    return withCors(request, NextResponse.json(
       { success: false, message: '저장에 실패했습니다.' },
       { status: 500 },
-    );
+    ));
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const userId = await getAuthenticatedUserId();
     if (!userId) {
-      return NextResponse.json(
+      return withCors(request, NextResponse.json(
         { success: false, message: '로그인이 필요합니다.' },
         { status: 401 },
-      );
+      ));
     }
 
     const events = await prisma.event.findMany({
@@ -100,7 +105,7 @@ export async function GET() {
       orderBy: { date: 'desc' },
     });
 
-    return NextResponse.json({
+    return withCors(request, NextResponse.json({
       success: true,
       events: events.map((e: any) => ({
         id: e.id,
@@ -116,12 +121,12 @@ export async function GET() {
         customEventName: e.customEventName,
         transactions: e.transactions,
       })),
-    });
+    }));
   } catch (err: any) {
     console.error('[events] GET error:', err?.message);
-    return NextResponse.json(
+    return withCors(request, NextResponse.json(
       { success: false, message: '조회에 실패했습니다.' },
       { status: 500 },
-    );
+    ));
   }
 }

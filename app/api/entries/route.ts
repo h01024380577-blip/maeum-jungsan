@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/prisma';
+import { verifyJwt } from '@/src/lib/jwt';
+import { corsResponse, withCors } from '@/src/lib/cors';
 
 function getUserId(req: NextRequest): string | null {
-  // 1순위: 토스 로그인 쿠키
+  // 1순위: Bearer 토큰
+  const authHeader = req.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const jwt = verifyJwt(authHeader.slice(7));
+    if (jwt) return jwt.userId;
+  }
+  // 2순위: 쿠키 (하위호환)
   const cookie = req.cookies.get('toss_user_id')?.value;
   if (cookie) return cookie;
-  // 2순위: 클라이언트가 헤더로 전달한 device ID (비로그인 게스트)
+  // 3순위: x-user-id 헤더 (게스트)
   return req.headers.get('x-user-id') ?? null;
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return corsResponse(req);
 }
 
 function toEventEntry(event: any, tx: any) {
@@ -32,24 +44,25 @@ function toEventEntry(event: any, tx: any) {
 
 export async function GET(req: NextRequest) {
   const userId = getUserId(req);
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!userId) return withCors(req, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
   const events = await prisma.event.findMany({
     where: { userId },
     include: { transactions: { take: 1, orderBy: { createdAt: 'desc' } } },
     orderBy: { createdAt: 'desc' },
   });
-  return NextResponse.json({ entries: events.map((e: any) => toEventEntry(e, e.transactions[0])) });
+  return withCors(req, NextResponse.json({ entries: events.map((e: any) => toEventEntry(e, e.transactions[0])) }));
 }
 
 export async function POST(req: NextRequest) {
   const userId = getUserId(req);
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!userId) return withCors(req, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
   const body = await req.json();
   const result = await prisma.$transaction(async (tx: any) => {
     // 로그인 사용자: toss_user_id 쿠키 = DB user.id
     // 비로그인 게스트: x-user-id 헤더 = device ID
     let realUserId = userId;
-    const isLoggedIn = !!req.cookies.get('toss_user_id')?.value;
+    const authHeader = req.headers.get('authorization');
+    const isLoggedIn = !!(authHeader?.startsWith('Bearer ') && verifyJwt(authHeader.slice(7))) || !!req.cookies.get('toss_user_id')?.value;
     if (!isLoggedIn) {
       // 비로그인 게스트만 upsert 필요
       const user = await tx.user.upsert({
@@ -74,7 +87,7 @@ export async function POST(req: NextRequest) {
     }
     return { event, transaction, contact };
   });
-  return NextResponse.json({
+  return withCors(req, NextResponse.json({
     entry: toEventEntry(result.event, result.transaction),
     contact: result.contact ? {
       id: result.contact.id,
@@ -83,23 +96,23 @@ export async function POST(req: NextRequest) {
       relation: result.contact.relation ?? '',
       userId: result.contact.userId,
     } : null,
-  });
+  }));
 }
 
 export async function DELETE(req: NextRequest) {
   const userId = getUserId(req);
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!userId) return withCors(req, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
   const id = new URL(req.url).searchParams.get('id');
-  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+  if (!id) return withCors(req, NextResponse.json({ error: 'Missing id' }, { status: 400 }));
   await prisma.event.deleteMany({ where: { id, userId } });
-  return NextResponse.json({ ok: true });
+  return withCors(req, NextResponse.json({ ok: true }));
 }
 
 export async function PATCH(req: NextRequest) {
   const userId = getUserId(req);
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!userId) return withCors(req, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
   const id = new URL(req.url).searchParams.get('id');
-  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+  if (!id) return withCors(req, NextResponse.json({ error: 'Missing id' }, { status: 400 }));
   const body = await req.json();
   const ev: any = {};
   if (body.date) ev.date = new Date(body.date);
@@ -114,5 +127,5 @@ export async function PATCH(req: NextRequest) {
     if (Object.keys(ev).length) await tx.event.updateMany({ where: { id, userId }, data: ev });
     if (Object.keys(tv).length) await tx.transaction.updateMany({ where: { eventId: id, userId }, data: tv });
   });
-  return NextResponse.json({ ok: true });
+  return withCors(req, NextResponse.json({ ok: true }));
 }

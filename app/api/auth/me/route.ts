@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/prisma';
 import { fetchWithRetry, isTokenExpiringSoon, parseScopes, stringifyScopes, TOSS_API_BASE } from '@/src/lib/tossApiClient';
+import { verifyJwt } from '@/src/lib/jwt';
+import { corsResponse, withCors } from '@/src/lib/cors';
 
 async function refreshAccessToken(userId: string): Promise<{ accessToken: string } | null> {
   const user = await prisma.user.findUnique({
@@ -44,14 +46,24 @@ async function refreshAccessToken(userId: string): Promise<{ accessToken: string
 }
 
 export async function GET(req: NextRequest) {
-  const userId = req.cookies.get('toss_user_id')?.value;
-  if (!userId) return NextResponse.json({ userId: null }, { status: 401 });
+  // 1순위: Bearer 토큰 (CSR 모드)
+  let userId: string | null = null;
+  const authHeader = req.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const jwt = verifyJwt(authHeader.slice(7));
+    if (jwt) userId = jwt.userId;
+  }
+  // 2순위: 쿠키 (하위호환)
+  if (!userId) {
+    userId = req.cookies.get('toss_user_id')?.value ?? null;
+  }
+  if (!userId) return withCors(req, NextResponse.json({ userId: null }, { status: 401 }));
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, tossUserKey: true, name: true, tokenExpiresAt: true, scopes: true, notificationsEnabled: true },
   });
-  if (!user) return NextResponse.json({ userId: null }, { status: 401 });
+  if (!user) return withCors(req, NextResponse.json({ userId: null }, { status: 401 }));
 
   // 만료 5분 전 선제 갱신
   let needsRelogin = false;
@@ -60,12 +72,16 @@ export async function GET(req: NextRequest) {
     if (!refreshed) needsRelogin = true;
   }
 
-  return NextResponse.json({
+  return withCors(req, NextResponse.json({
     userId: user.id,
     userKey: user.tossUserKey,
     name: user.name,
     scopes: parseScopes(user.scopes),
     notificationsEnabled: user.notificationsEnabled,
     needsRelogin, // true면 클라이언트에서 재로그인 유도
-  });
+  }));
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return corsResponse(req);
 }

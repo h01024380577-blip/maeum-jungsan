@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Heart, Sparkles, Shield } from "lucide-react";
 import { useStore } from "@/src/store/useStore";
 import { tossLogin } from "@/src/lib/tossAuth";
+import { apiFetch, setAuthToken } from "@/src/lib/apiClient";
 
 const SKIP_ONBOARDING_PATHS = ['/terms', '/intro'];
 
@@ -17,12 +18,13 @@ function OnboardingScreen() {
     try {
       const result = await tossLogin();
       if (!result) return;
-      const res = await fetch('/api/auth/toss', {
+      const res = await apiFetch('/api/auth/toss', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(result),
       });
       if (res.ok) {
+        const data = await res.json();
+        if (data.token) setAuthToken(data.token);
         await loadFromSupabase();
       }
     } finally {

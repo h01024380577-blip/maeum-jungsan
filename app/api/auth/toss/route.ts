@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/prisma';
 import { fetchWithRetry, decryptField, parseScopes, stringifyScopes, TOSS_API_BASE } from '@/src/lib/tossApiClient';
+import { signJwt } from '@/src/lib/jwt';
+import { corsResponse, withCors } from '@/src/lib/cors';
 
 export async function POST(req: NextRequest) {
   let body: { authorizationCode?: string; referrer?: string };
   try { body = await req.json(); } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    return withCors(req, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }));
   }
 
   const { authorizationCode, referrer } = body;
   if (!authorizationCode) {
-    return NextResponse.json({ error: 'Missing authorizationCode' }, { status: 400 });
+    return withCors(req, NextResponse.json({ error: 'Missing authorizationCode' }, { status: 400 }));
   }
 
   // Step 1: AccessToken 발급 (인가코드 유효시간 10분)
@@ -26,15 +28,15 @@ export async function POST(req: NextRequest) {
     );
     tokenData = await tokenRes.json();
   } catch {
-    return NextResponse.json({ error: 'NETWORK_ERROR', message: '토스 서버 연결 실패' }, { status: 503 });
+    return withCors(req, NextResponse.json({ error: 'NETWORK_ERROR', message: '토스 서버 연결 실패' }, { status: 503 }));
   }
 
   // invalid_grant: 인가코드 만료 또는 중복 사용
   if (tokenData.error?.code === 'invalid_grant') {
-    return NextResponse.json({ error: 'INVALID_GRANT', message: '인가코드가 만료되었거나 이미 사용되었습니다. 다시 로그인해 주세요.' }, { status: 401 });
+    return withCors(req, NextResponse.json({ error: 'INVALID_GRANT', message: '인가코드가 만료되었거나 이미 사용되었습니다. 다시 로그인해 주세요.' }, { status: 401 }));
   }
   if (!tokenData.success?.accessToken) {
-    return NextResponse.json({ error: 'TOKEN_FAILED', detail: tokenData.error?.code }, { status: 401 });
+    return withCors(req, NextResponse.json({ error: 'TOKEN_FAILED', detail: tokenData.error?.code }, { status: 401 }));
   }
 
   const { accessToken, refreshToken, expiresIn } = tokenData.success;
@@ -50,11 +52,11 @@ export async function POST(req: NextRequest) {
     );
     userData = await userRes.json();
   } catch {
-    return NextResponse.json({ error: 'NETWORK_ERROR', message: '사용자 정보 조회 실패' }, { status: 503 });
+    return withCors(req, NextResponse.json({ error: 'NETWORK_ERROR', message: '사용자 정보 조회 실패' }, { status: 503 }));
   }
 
   if (!userData.success?.userKey) {
-    return NextResponse.json({ error: 'USER_FETCH_FAILED' }, { status: 401 });
+    return withCors(req, NextResponse.json({ error: 'USER_FETCH_FAILED' }, { status: 401 }));
   }
 
   const { userKey, name: rawName, scope } = userData.success;
@@ -87,7 +89,11 @@ export async function POST(req: NextRequest) {
     select: { id: true },
   });
 
-  const res = NextResponse.json({ ok: true, userId: user.id });
+  // JWT 발급 (CSR 모드용)
+  const token = signJwt({ userId: user.id, userKey: String(userKey) });
+
+  const res = NextResponse.json({ ok: true, userId: user.id, token });
+  // 쿠키도 유지 (SSR 하위호환)
   const cookieOpts = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -96,5 +102,9 @@ export async function POST(req: NextRequest) {
   };
   res.cookies.set('toss_user_id', user.id, cookieOpts);
   res.cookies.set('toss_user_key', String(userKey), cookieOpts);
-  return res;
+  return withCors(req, res);
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return corsResponse(req);
 }

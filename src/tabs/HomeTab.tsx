@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { apiFetch } from '@/src/lib/apiClient';
 import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, User, Copy, HelpCircle, MessageSquare, Info } from 'lucide-react';
 import { useStore, EventEntry, EventType } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -91,9 +92,8 @@ export default function HomeTab() {
     setNotificationLoading(true);
     try {
       const next = !notificationsEnabled;
-      const res = await fetch('/api/notification-consent', {
+      const res = await apiFetch('/api/notification-consent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: next }),
       });
       if (res.ok) {
@@ -170,9 +170,8 @@ export default function HomeTab() {
     setIsParsing(true);
     try {
       // 모든 분석을 서버 API Route로 위임 (NEXT_PUBLIC 키 노출 제거)
-      const res = await fetch('/api/analyze', {
+      const res = await apiFetch('/api/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, data }),
       });
       const result = await res.json();

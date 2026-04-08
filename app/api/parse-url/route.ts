@@ -1,7 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { fetchPageHtml } from '@/src/lib/fetchPage';
 import { extractMetaTags, extractJsonLd, extractBodyText, hasEnoughData } from '@/src/lib/parseUrl';
+import { corsResponse, withCors } from '@/src/lib/cors';
+
+export async function OPTIONS(req: NextRequest) {
+  return corsResponse(req);
+}
 
 const SYSTEM_INSTRUCTION = `너는 한국 경조사 초대장 분석 전문가야.
 제공되는 데이터에서 경조사 정보를 추출해 JSON으로 반환해.
@@ -85,30 +90,30 @@ async function fetchRenderedText(url: string): Promise<string | null> {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const url = body?.url;
 
     if (!url || typeof url !== 'string') {
-      return NextResponse.json(
+      return withCors(request, NextResponse.json(
         { success: false, reason: 'invalid_url', message: 'URL이 필요합니다.' },
         { status: 400 },
-      );
+      ));
     }
     try { new URL(url); } catch {
-      return NextResponse.json(
+      return withCors(request, NextResponse.json(
         { success: false, reason: 'invalid_url', message: '올바른 URL 형식이 아닙니다.' },
         { status: 400 },
-      );
+      ));
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json(
+      return withCors(request, NextResponse.json(
         { success: false, reason: 'ai_failed', message: 'API 키가 설정되지 않았습니다.' },
         { status: 500 },
-      );
+      ));
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -146,18 +151,17 @@ export async function POST(request: Request) {
         const confidence = calculateConfidence(data);
 
         if (confidence !== 'low') {
-          return NextResponse.json({ success: true, data, confidence, source: 'og+body' });
+          return withCors(request, NextResponse.json({ success: true, data, confidence, source: 'og+body' }));
         }
       } catch (e: any) {
         console.error('[parse-url] Phase 1a error:', e?.message);
         if (isRateLimitError(e)) {
-          return NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 });
+          return withCors(request, NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 }));
         }
       }
     }
 
     // ========== Phase 2: Jina Reader (SPA 렌더링 대응) ==========
-    // JS로 동적 렌더링되는 사이트의 실제 콘텐츠를 가져옴
     try {
       const renderedText = await fetchRenderedText(url);
       if (renderedText && renderedText.length > 100) {
@@ -178,13 +182,13 @@ ${OUTPUT_SCHEMA}`;
         const confidence = calculateConfidence(data);
 
         if (confidence !== 'low') {
-          return NextResponse.json({ success: true, data, confidence, source: 'rendered' });
+          return withCors(request, NextResponse.json({ success: true, data, confidence, source: 'rendered' }));
         }
       }
     } catch (e: any) {
       console.error('[parse-url] Phase 2 (Jina) error:', e?.message);
       if (isRateLimitError(e)) {
-        return NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 });
+        return withCors(request, NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 }));
       }
     }
 
@@ -206,21 +210,21 @@ ${OUTPUT_SCHEMA}`;
       const data = normalizeData(parseAiResponse(response.text || '{}'));
       const confidence = calculateConfidence(data);
 
-      return NextResponse.json({ success: true, data, confidence, source: 'url-context' });
+      return withCors(request, NextResponse.json({ success: true, data, confidence, source: 'url-context' }));
     } catch (e: any) {
       console.error('[parse-url] Phase 3 error:', e?.message);
       if (isRateLimitError(e)) {
-        return NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 });
+        return withCors(request, NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 }));
       }
-      return NextResponse.json(
+      return withCors(request, NextResponse.json(
         { success: false, reason: 'ai_failed', message: 'AI 분석에 실패했습니다.' },
         { status: 500 },
-      );
+      ));
     }
   } catch {
-    return NextResponse.json(
+    return withCors(request, NextResponse.json(
       { success: false, reason: 'parse_failed', message: '요청 처리 중 오류가 발생했습니다.' },
       { status: 500 },
-    );
+    ));
   }
 }

@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Heart, Sparkles, Shield } from 'lucide-react';
 import { tossLogin } from '@/src/lib/tossAuth';
+import { apiFetch, setAuthToken } from '@/src/lib/apiClient';
 
 export default function IntroPage() {
   const router = useRouter();
@@ -10,12 +11,15 @@ export default function IntroPage() {
   const handleStart = async () => {
     const result = await tossLogin();
     if (!result) return;
-    const res = await fetch('/api/auth/toss', {
+    const res = await apiFetch('/api/auth/toss', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(result),
     });
-    if (res.ok) router.push('/');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.token) setAuthToken(data.token);
+      router.push('/');
+    }
   };
 
   return (

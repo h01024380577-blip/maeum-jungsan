@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/prisma';
 import { tossMessengerFetch } from '@/src/lib/tossMessengerFetch';
+import { verifyJwt } from '@/src/lib/jwt';
+import { corsResponse, withCors } from '@/src/lib/cors';
+
+export async function OPTIONS(req: NextRequest) {
+  return corsResponse(req);
+}
 
 export async function POST(req: NextRequest) {
-  const userId = req.cookies.get('toss_user_id')?.value;
-  const userKey = req.cookies.get('toss_user_key')?.value;
+  let userId = req.cookies.get('toss_user_id')?.value;
+  let userKey = req.cookies.get('toss_user_key')?.value;
+  const authHeader = req.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const jwt = verifyJwt(authHeader.slice(7));
+    if (jwt) { userId = jwt.userId; userKey = jwt.userKey; }
+  }
 
   if (!userId || !userKey) {
-    return NextResponse.json({ ok: false, reason: 'not_logged_in' });
+    return withCors(req, NextResponse.json({ ok: false, reason: 'not_logged_in' }));
   }
 
   const user = await prisma.user.findUnique({
@@ -16,12 +27,12 @@ export async function POST(req: NextRequest) {
   });
 
   if (!user?.notificationsEnabled) {
-    return NextResponse.json({ ok: false, reason: 'not_enabled' });
+    return withCors(req, NextResponse.json({ ok: false, reason: 'not_enabled' }));
   }
 
   const templateCode = process.env.TOSS_MSG_TEMPLATE_CODE;
   if (!templateCode) {
-    return NextResponse.json({ ok: false, reason: 'no_template_configured' });
+    return withCors(req, NextResponse.json({ ok: false, reason: 'no_template_configured' }));
   }
 
   const body = await req.json().catch(() => ({}));
@@ -39,8 +50,8 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({ templateSetCode: templateCode, context }),
       }
     );
-    return NextResponse.json({ ok: true, result });
+    return withCors(req, NextResponse.json({ ok: true, result }));
   } catch {
-    return NextResponse.json({ ok: false, reason: 'send_failed' }, { status: 500 });
+    return withCors(req, NextResponse.json({ ok: false, reason: 'send_failed' }, { status: 500 }));
   }
 }

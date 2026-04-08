@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { apiFetch, clearAuthToken } from '@/src/lib/apiClient';
 
 export type EventType = 'wedding' | 'funeral' | 'birthday' | 'other';
 export type TransactionType = 'INCOME' | 'EXPENSE';
@@ -64,42 +65,6 @@ interface AppState {
 }
 
 
-async function getUserId(): Promise<string> {
-  // 1순위: 토스 로그인 쿠키 확인
-  try {
-    const res = await fetch('/api/auth/me');
-    if (res.ok) {
-      const { userId } = await res.json();
-      if (userId) return userId;
-    }
-  } catch {}
-
-  // 2순위: 앱인토스 SDK 기기 ID
-  try {
-    const { getDeviceId } = await import('@apps-in-toss/web-framework');
-    const deviceId = await getDeviceId();
-    if (deviceId) return deviceId;
-  } catch {}
-
-  // 3순위: localStorage fallback
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('heartbook-device-id');
-    if (stored) return stored;
-    const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
-    localStorage.setItem('heartbook-device-id', id);
-    return id;
-  }
-  return 'server';
-}
-
-async function getAuthHeaders(): Promise<HeadersInit> {
-  const userId = await getUserId();
-  return {
-    'Content-Type': 'application/json',
-    'x-user-id': userId,
-  };
-}
-
 export const useStore = create<AppState>()((set, get) => ({
   entries: [],
   contacts: [],
@@ -120,7 +85,7 @@ export const useStore = create<AppState>()((set, get) => ({
   loadFromSupabase: async () => {
     try {
       // 로그인 여부 먼저 확인
-      const meRes = await fetch('/api/auth/me');
+      const meRes = await apiFetch('/api/auth/me');
       if (!meRes.ok) {
         // 비로그인: 데이터 비우고 로드 완료
         set({ entries: [], contacts: [], tossUserId: null, tossUserName: null, notificationsEnabled: false, isLoaded: true });
@@ -128,6 +93,7 @@ export const useStore = create<AppState>()((set, get) => ({
       }
       const me = await meRes.json();
       if (me.needsRelogin) {
+        clearAuthToken();
         set({ entries: [], contacts: [], tossUserId: null, tossUserName: null, notificationsEnabled: false, isLoaded: true });
         return;
       }
@@ -137,8 +103,8 @@ export const useStore = create<AppState>()((set, get) => ({
         notificationsEnabled: me.notificationsEnabled ?? false,
       });
       const [entriesRes, contactsRes] = await Promise.all([
-        fetch('/api/entries', { headers: await getAuthHeaders() }).then(r => r.ok ? r.json() : { entries: [] }),
-        fetch('/api/contacts', { headers: await getAuthHeaders() }).then(r => r.ok ? r.json() : { contacts: [] }),
+        apiFetch('/api/entries').then(r => r.ok ? r.json() : { entries: [] }),
+        apiFetch('/api/contacts').then(r => r.ok ? r.json() : { contacts: [] }),
       ]);
       set({
         entries: entriesRes.entries ?? [],
@@ -151,9 +117,8 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   addEntry: async (entry) => {
-    const res = await fetch('/api/entries', {
+    const res = await apiFetch('/api/entries', {
       method: 'POST',
-      headers: await getAuthHeaders(),
       body: JSON.stringify(entry),
     });
     if (!res.ok) {
@@ -171,14 +136,13 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   removeEntry: async (id) => {
-    await fetch(`/api/entries?id=${id}`, { method: 'DELETE', headers: await getAuthHeaders() });
+    await apiFetch(`/api/entries?id=${id}`, { method: 'DELETE' });
     set(state => ({ entries: state.entries.filter(e => e.id !== id) }));
   },
 
   updateEntry: async (id, updatedFields) => {
-    await fetch(`/api/entries?id=${id}`, {
+    await apiFetch(`/api/entries?id=${id}`, {
       method: 'PATCH',
-      headers: await getAuthHeaders(),
       body: JSON.stringify(updatedFields),
     });
     set(state => ({
@@ -187,9 +151,8 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   addContact: async (contact) => {
-    const res = await fetch('/api/contacts', {
+    const res = await apiFetch('/api/contacts', {
       method: 'POST',
-      headers: await getAuthHeaders(),
       body: JSON.stringify(contact),
     });
     if (!res.ok) throw new Error('Contact 저장 실패');
@@ -199,9 +162,8 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   updateContact: async (id, updatedFields) => {
-    await fetch(`/api/contacts?id=${id}`, {
+    await apiFetch(`/api/contacts?id=${id}`, {
       method: 'PATCH',
-      headers: await getAuthHeaders(),
       body: JSON.stringify(updatedFields),
     });
     set(state => ({
@@ -210,7 +172,7 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   removeContact: async (id) => {
-    await fetch(`/api/contacts?id=${id}`, { method: 'DELETE', headers: await getAuthHeaders() });
+    await apiFetch(`/api/contacts?id=${id}`, { method: 'DELETE' });
     set(state => ({ contacts: state.contacts.filter(c => c.id !== id) }));
   },
 
@@ -230,8 +192,10 @@ export const useStore = create<AppState>()((set, get) => ({
       feedback: [...state.feedback, { original, corrected, timestamp: Date.now() }],
     })),
 
-  clearData: () =>
-    set({ entries: [], contacts: [], feedback: [], tossUserId: null, tossUserName: null, notificationsEnabled: false, isLoaded: true }),
+  clearData: () => {
+    clearAuthToken();
+    set({ entries: [], contacts: [], feedback: [], tossUserId: null, tossUserName: null, notificationsEnabled: false, isLoaded: true });
+  },
 
   setNotificationsEnabled: (enabled: boolean) =>
     set({ notificationsEnabled: enabled }),

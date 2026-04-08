@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { tossPayFetch } from '@/src/lib/tossPayFetch';
+import { verifyJwt } from '@/src/lib/jwt';
+import { corsResponse, withCors } from '@/src/lib/cors';
+
+export async function OPTIONS(req: NextRequest) {
+  return corsResponse(req);
+}
 
 export async function POST(req: NextRequest) {
-  const tossUserKey = req.cookies.get('toss_user_key')?.value;
+  let tossUserKey = req.cookies.get('toss_user_key')?.value;
+  const authHeader = req.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const jwt = verifyJwt(authHeader.slice(7));
+    if (jwt) tossUserKey = jwt.userKey;
+  }
+
   if (!tossUserKey) {
-    return NextResponse.json({ error: '토스 로그인이 필요합니다.' }, { status: 401 });
+    return withCors(req, NextResponse.json({ error: '토스 로그인이 필요합니다.' }, { status: 401 }));
   }
 
   const { payToken, orderNo } = await req.json();
@@ -23,9 +35,9 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    return NextResponse.json(data);
+    return withCors(req, NextResponse.json(data));
   } catch (e: any) {
     console.error('[payment/execute]', e?.message);
-    return NextResponse.json({ error: '결제 실행 중 오류가 발생했습니다.' }, { status: 500 });
+    return withCors(req, NextResponse.json({ error: '결제 실행 중 오류가 발생했습니다.' }, { status: 500 }));
   }
 }
